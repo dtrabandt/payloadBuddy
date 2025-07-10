@@ -42,12 +42,80 @@ By default, the server listens on port 8080. You can test the endpoint (e.g., `/
 
 #### Example Request
 ```sh
-curl http://localhost:8080/payload
+curl http://localhost:8080/huge_payload
+```
+
+## Running Tests
+
+This project includes schema-based unit tests to ensure the structure of JSON responses matches the documented schema.  
+To run all tests (including schema validation):
+
+```sh
+go test ./...
+```
+See `huge_payload_handler_test.go` for example tests using gojsonschema.
+
+### Example: JSON Schema Validation Test
+```go
+import (
+    "io"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+    "github.com/xeipuuv/gojsonschema"
+)
+
+func TestHugePayloadHandler_JSONSchema(t *testing.T) {
+    req := httptest.NewRequest(http.MethodGet, "/huge_payload", nil)
+    w := httptest.NewRecorder()
+
+    HugePayloadHandler(w, req)
+
+    resp := w.Result()
+    defer resp.Body.Close()
+
+    bodyBytes, err := io.ReadAll(resp.Body)
+    if err != nil {
+        t.Fatalf("Failed to read response body: %v", err)
+    }
+
+    schema := `{
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"}
+            },
+            "required": ["id", "name"]
+        }
+    }`
+
+    schemaLoader := gojsonschema.NewStringLoader(schema)
+    documentLoader := gojsonschema.NewBytesLoader(bodyBytes)
+
+    result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+    if err != nil {
+        t.Fatalf("Schema validation failed: %v", err)
+    }
+    if !result.Valid() {
+        for _, err := range result.Errors() {
+            t.Errorf("Schema error: %s", err)
+        }
+    }
+}
 ```
 
 ## Customization
-- Adjust the payload size or structure in `handler.go` as needed for your testing scenario.
+- Adjust the payload size or structure in `hugePayloadHandler.go` as needed for your testing scenario.
 - Modify endpoints or add new ones to simulate different REST behaviors.
+
+## Dependencies
+
+This project uses the following Go package for schema-based testing:
+
+- [github.com/xeipuuv/gojsonschema](https://github.com/xeipuuv/gojsonschema): Used in test cases to validate JSON API responses against a JSON Schema.
+
 
 ## Best Practices for Handling Large Payloads
 - **Pagination:** Break large datasets into smaller pages.
