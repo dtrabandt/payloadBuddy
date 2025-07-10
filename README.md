@@ -24,7 +24,7 @@ In some environments, such as ServiceNow, REST calls from Flow Actions may fail 
 ### Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-org/gohugePayloadServer.git
+   git clone https://github.com/dtrabandt/gohugePayloadServer.git
    cd gohugePayloadServer
    ```
 2. Build the server:
@@ -38,7 +38,7 @@ Run the server:
 ./gohugePayloadServer
 ```
 
-By default, the server listens on port 8080. You can test the endpoint (e.g., `/payload`) to receive a large JSON response.
+By default, the server listens on port 8080. You can test the endpoint (e.g., `/huge_payload`) to receive a large JSON response.
 
 #### Example Request
 ```sh
@@ -107,7 +107,7 @@ func TestHugePayloadHandler_JSONSchema(t *testing.T) {
 ```
 
 ## Customization
-- Adjust the payload size or structure in `hugePayloadHandler.go` as needed for your testing scenario.
+- Adjust the payload size or structure in `huge_payload_handler.go` as needed for your testing scenario.
 - Modify endpoints or add new ones to simulate different REST behaviors.
 
 ## Dependencies
