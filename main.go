@@ -11,11 +11,11 @@ import (
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
 	// Register the /payload endpoint with its handler function.
-	http.HandleFunc("/payload", PayloadHandler)
+	http.HandleFunc("/huge_payload", HugePayloadHandler)
 
 	port := "8080"
 	addr := ":" + port
-	fmt.Printf("Starting server on http://localhost:%s/payload\n", port)
+	fmt.Printf("Starting server on http://localhost:%s/huge_payload\n", port)
 
 	// Start the HTTP server and log any fatal errors.
 	if err := http.ListenAndServe(addr, nil); err != nil {
