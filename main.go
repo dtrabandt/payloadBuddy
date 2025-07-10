@@ -7,10 +7,10 @@ import (
 )
 
 // main is the entry point for the gohugePayloadServer application.
-// It starts an HTTP server on port 8080 and registers the /payload endpoint.
+// It starts an HTTP server on port 8080 and registers the /huge_payload endpoint.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
-	// Register the /payload endpoint with its handler function.
+	// Register the /huge_payload endpoint with its handler function.
 	http.HandleFunc("/huge_payload", HugePayloadHandler)
 
 	port := "8080"
