@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
 )
 
 // PayloadPlugin is an interface that must be implemented by
@@ -25,17 +27,38 @@ func registerPlugin(p PayloadPlugin) {
 }
 
 // main is the entry point for the gohugePayloadServer application.
-// It starts an HTTP server on port 8080 and registers the /huge_payload endpoint.
+// It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
+	// Initialize random seed for delay variations in streaming
+	rand.Seed(time.Now().UnixNano())
+
 	// Register plugins
 	for _, p := range plugins {
 		http.HandleFunc(p.Path(), p.Handler())
+		fmt.Printf("Registered endpoint: %s\n", p.Path())
 	}
 
 	port := "8080"
 	addr := ":" + port
-	fmt.Printf("Starting server on http://localhost:%s/huge_payload\n", port)
+
+	fmt.Printf("\nStarting gohugePayloadServer on http://localhost:%s\n", port)
+	fmt.Println("\nAvailable endpoints:")
+	fmt.Printf("  http://localhost:%s/huge_payload\n", port)
+	fmt.Printf("  http://localhost:%s/stream_payload\n", port)
+
+	fmt.Println("\nStreaming examples:")
+	fmt.Printf("  http://localhost:%s/stream_payload?count=1000&delay=100ms\n", port)
+	fmt.Printf("  http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true\n", port)
+	fmt.Printf("  http://localhost:%s/stream_payload?delay=50ms&strategy=random&batch_size=50\n", port)
+
+	fmt.Println("\nServiceNow test scenarios:")
+	fmt.Printf("  - peak_hours: Simulates ServiceNow during peak hours\n")
+	fmt.Printf("  - maintenance: Simulates maintenance windows with spikes\n")
+	fmt.Printf("  - network_issues: Random network delays\n")
+	fmt.Printf("  - database_load: Progressive database load simulation\n")
+
+	fmt.Println("\nPress Ctrl+C to stop the server")
 
 	// Start the HTTP server and log any fatal errors.
 	if err := http.ListenAndServe(addr, nil); err != nil {
