@@ -1,13 +1,20 @@
 # gohugePayloadServer
 
-A simple Go server designed to test REST client implementations with large payloads. This project is intended for training and troubleshooting scenarios where REST consumers (such as ServiceNow) struggle to process or return large datasets in memory.
+A simple Go server designed to test REST client implementations with large payloads and streaming data. This project is intended for training and troubleshooting scenarios where REST consumers (such as ServiceNow) struggle to process or return large datasets in memory.
 
 ## Purpose
 
 This server helps consultants and developers:
 - Simulate REST endpoints that return very large JSON payloads.
+- Test streaming endpoints for clients that need to process data incrementally.
 - Identify and troubleshoot issues with clients (e.g., ServiceNow Flow Actions) that cannot handle large responses.
 - Train on best practices for handling large data transfers in REST APIs.
+
+## Features
+
+- **/huge_payload**: Returns a large JSON array (100,000 objects) in a single response for stress-testing REST clients.
+- **/stream_payload**: Streams a large JSON array (10,000 objects) in chunked encoding, allowing clients to process data as it arrives.
+- **Plugin Architecture**: Easily extend the server with new payload or streaming plugins by implementing the `PayloadPlugin` interface.
 
 ## Use Case
 
@@ -24,7 +31,7 @@ In some environments, such as ServiceNow, REST calls from Flow Actions may fail 
 ### Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/dtrabandt/gohugePayloadServer.git
+   git clone https://github.com/your-org/gohugePayloadServer.git
    cd gohugePayloadServer
    ```
 2. Build the server:
@@ -38,84 +45,21 @@ Run the server:
 ./gohugePayloadServer
 ```
 
-By default, the server listens on port 8080. You can test the endpoint (e.g., `/huge_payload`) to receive a large JSON response.
+By default, the server listens on port 8080. You can test the endpoints:
 
-#### Example Request
-```sh
-curl http://localhost:8080/huge_payload
-```
-
-## Running Tests
-
-This project includes schema-based unit tests to ensure the structure of JSON responses matches the documented schema.  
-To run all tests (including schema validation):
-
-```sh
-go test ./...
-```
-See `huge_payload_handler_test.go` for example tests using gojsonschema.
-
-### Example: JSON Schema Validation Test
-```go
-import (
-    "io"
-    "net/http"
-    "net/http/httptest"
-    "testing"
-    "github.com/xeipuuv/gojsonschema"
-)
-
-func TestHugePayloadHandler_JSONSchema(t *testing.T) {
-    req := httptest.NewRequest(http.MethodGet, "/huge_payload", nil)
-    w := httptest.NewRecorder()
-
-    HugePayloadHandler(w, req)
-
-    resp := w.Result()
-    defer resp.Body.Close()
-
-    bodyBytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        t.Fatalf("Failed to read response body: %v", err)
-    }
-
-    schema := `{
-        "type": "array",
-        "items": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "integer"},
-                "name": {"type": "string"}
-            },
-            "required": ["id", "name"]
-        }
-    }`
-
-    schemaLoader := gojsonschema.NewStringLoader(schema)
-    documentLoader := gojsonschema.NewBytesLoader(bodyBytes)
-
-    result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-    if err != nil {
-        t.Fatalf("Schema validation failed: %v", err)
-    }
-    if !result.Valid() {
-        for _, err := range result.Errors() {
-            t.Errorf("Schema error: %s", err)
-        }
-    }
-}
-```
+#### Example Requests
+- Huge payload:
+  ```sh
+  curl http://localhost:8080/huge_payload
+  ```
+- Streaming payload:
+  ```sh
+  curl http://localhost:8080/stream_payload
+  ```
 
 ## Customization
-- Adjust the payload size or structure in `huge_payload_handler.go` as needed for your testing scenario.
-- Modify endpoints or add new ones to simulate different REST behaviors.
-
-## Dependencies
-
-This project uses the following Go package for schema-based testing:
-
-- [github.com/xeipuuv/gojsonschema](https://github.com/xeipuuv/gojsonschema): Used in test cases to validate JSON API responses against a JSON Schema.
-
+- Adjust the payload size or structure in `huge_payload_handler.go` and `streaming_payload_handler.go` as needed for your testing scenario.
+- Add new plugins by implementing the `PayloadPlugin` interface and registering them in `main.go`.
 
 ## Best Practices for Handling Large Payloads
 - **Pagination:** Break large datasets into smaller pages.
