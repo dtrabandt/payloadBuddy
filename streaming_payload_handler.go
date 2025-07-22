@@ -168,7 +168,7 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse parameters
 	count := getIntParam(r, "count", 10000)
-	baseDelay := getDurationParam(r, "delay", 0)
+	baseDelay := getDurationParam(r, "delay", 10)
 	strategy := getDelayStrategy(r)
 	scenario := strings.ToLower(r.URL.Query().Get("scenario"))
 	batchSize := getIntParam(r, "batch_size", 100)

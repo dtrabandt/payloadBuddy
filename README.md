@@ -86,7 +86,7 @@ Advanced streaming endpoint with multiple configuration options.
 | Parameter | Description | Default | Examples |
 |-----------|-------------|---------|----------|
 | `count` | Number of items to stream | 10000 | `count=1000` |
-| `delay` | Base delay between items | 0 | `delay=100ms`, `delay=1s`, `delay=500` |
+| `delay` | Base delay between items | 10 | `delay=100ms`, `delay=1s`, `delay=500` |
 | `strategy` | Delay pattern | fixed | `fixed`, `random`, `progressive`, `burst` |
 | `scenario` | ServiceNow scenario | none | `peak_hours`, `maintenance`, `network_issues`, `database_load` |
 | `batch_size` | Items per flush | 100 | `batch_size=50` |

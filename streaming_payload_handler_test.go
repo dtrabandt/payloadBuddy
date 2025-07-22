@@ -112,15 +112,15 @@ func TestStreamingPayloadHandler_InvalidCount(t *testing.T) {
 func TestStreamingPayloadHandler_DelayParameter(t *testing.T) {
 	start := time.Now()
 
-	req := httptest.NewRequest("GET", "/stream_payload?count=3&delay=10ms", nil)
+	req := httptest.NewRequest("GET", "/stream_payload?count=3&delay=20ms", nil)
 	w := httptest.NewRecorder()
 
 	StreamingPayloadHandler(w, req)
 
 	elapsed := time.Since(start)
 
-	// Should take at least 20ms (3 items with 10ms delay each, minus some)
-	if elapsed < 15*time.Millisecond {
+	// Should take at least 60ms (3 items with 20ms delay each, minus some)
+	if elapsed < 55*time.Millisecond {
 		t.Errorf("Expected delay to be applied, took only %v", elapsed)
 	}
 }
