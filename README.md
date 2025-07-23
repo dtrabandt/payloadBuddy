@@ -72,7 +72,7 @@ The server listens on port 8080 and provides detailed startup information with e
 ## API Reference
 
 ### /huge_payload
-Returns 100,000 JSON objects in a single response.
+Returns 100,000 JSON objects in a single response (default, configurable via `count` parameter).
 
 ```sh
 curl http://localhost:8080/huge_payload

@@ -16,11 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable batch sizes for flushing
   - Parameter validation and error handling
 
+- **HugePayloadHandler**: Added support for `count` query parameter (default 10,000, up to 1,000,000)
+
 - **Enhanced Testing**:
   - Comprehensive test suite for streaming handler
   - Tests for all delay strategies and ServiceNow scenarios
   - Parameter validation tests
   - Performance and timing tests
+  - Test for huge_payload count parameter
 
 - **Improved Documentation**:
   - Complete API reference with examples

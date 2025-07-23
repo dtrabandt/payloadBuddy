@@ -82,8 +82,8 @@ func TestHugePayloadHandler_ResponseLength(t *testing.T) {
 		t.Fatalf("Failed to decode JSON: %v", err)
 	}
 	fmt.Printf("[TestHugePayloadHandler_ResponseLength] Decoded payload length: %d\n", len(payload))
-	if len(payload) != 100000 {
-		t.Errorf("Expected payload length 100000, got %d", len(payload))
+	if len(payload) != 10000 {
+		t.Errorf("Expected payload length 10000, got %d", len(payload))
 	} else {
 		fmt.Println("[TestHugePayloadHandler_ResponseLength] Payload length is correct.")
 	}
@@ -116,4 +116,28 @@ func TestHugePayloadHandler_PayloadContent(t *testing.T) {
 	}
 
 	fmt.Println("[TestHugePayloadHandler_PayloadContent] All items have correct ids.")
+}
+
+// TestHugePayloadHandler_CountParameter checks that the /huge_payload endpoint respects the count query parameter.
+func TestHugePayloadHandler_CountParameter(t *testing.T) {
+	req := httptest.NewRequest("GET", "/huge_payload?count=5", nil)
+	w := httptest.NewRecorder()
+
+	HugePayloadHandler(w, req)
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	body := w.Body.String()
+
+	var items []Item
+	if err := json.Unmarshal([]byte(body), &items); err != nil {
+		t.Fatalf("Failed to parse JSON: %v", err)
+	}
+
+	if len(items) != 5 {
+		t.Errorf("Expected 5 items, got %d", len(items))
+	}
 }

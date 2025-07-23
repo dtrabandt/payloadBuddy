@@ -47,6 +47,10 @@ func main() {
 	fmt.Printf("  http://localhost:%s/huge_payload\n", port)
 	fmt.Printf("  http://localhost:%s/stream_payload\n", port)
 
+	fmt.Println("\nHuge Payload examples:")
+	fmt.Printf("  http://localhost:%s/huge_payload\n", port)
+	fmt.Printf("  http://localhost:%s/huge_payload?count=5000\n", port)
+
 	fmt.Println("\nStreaming examples:")
 	fmt.Printf("  http://localhost:%s/stream_payload?count=1000&delay=100ms\n", port)
 	fmt.Printf("  http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true\n", port)
