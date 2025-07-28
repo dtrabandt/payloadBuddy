@@ -1,8 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"math/rand"
+	mathRand "math/rand"
 	"net/http"
 	"os"
 	"time"
@@ -30,12 +31,18 @@ func registerPlugin(p PayloadPlugin) {
 // It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
+	// Parse command line flags
+	flag.Parse()
+	
 	// Initialize random seed for delay variations in streaming
-	rand.Seed(time.Now().UnixNano())
+	mathRand.Seed(time.Now().UnixNano())
 
-	// Register plugins
+	// Setup authentication if enabled
+	setupAuthentication()
+
+	// Register plugins with authentication middleware
 	for _, p := range plugins {
-		http.HandleFunc(p.Path(), p.Handler())
+		http.HandleFunc(p.Path(), basicAuthMiddleware(p.Handler()))
 		fmt.Printf("Registered endpoint: %s\n", p.Path())
 	}
 
@@ -43,18 +50,22 @@ func main() {
 	addr := ":" + port
 
 	fmt.Printf("\nStarting gohugePayloadServer on http://localhost:%s\n", port)
+	
+	// Print authentication info if enabled
+	printAuthenticationInfo()
+	
 	fmt.Println("\nAvailable endpoints:")
-	fmt.Printf("  http://localhost:%s/huge_payload\n", port)
-	fmt.Printf("  http://localhost:%s/stream_payload\n", port)
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
 
 	fmt.Println("\nHuge Payload examples:")
-	fmt.Printf("  http://localhost:%s/huge_payload\n", port)
-	fmt.Printf("  http://localhost:%s/huge_payload?count=5000\n", port)
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload?count=5000", port)))
 
 	fmt.Println("\nStreaming examples:")
-	fmt.Printf("  http://localhost:%s/stream_payload?count=1000&delay=100ms\n", port)
-	fmt.Printf("  http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true\n", port)
-	fmt.Printf("  http://localhost:%s/stream_payload?delay=50ms&strategy=random&batch_size=50\n", port)
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?delay=50ms&strategy=random&batch_size=50", port)))
 
 	fmt.Println("\nServiceNow test scenarios:")
 	fmt.Printf("  - peak_hours: Simulates ServiceNow during peak hours\n")

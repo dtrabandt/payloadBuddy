@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	mathRand "math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -88,7 +88,7 @@ func generateSysID() string {
 	chars := "abcdef0123456789"
 	result := make([]byte, 32)
 	for i := range result {
-		result[i] = chars[rand.Intn(len(chars))]
+		result[i] = chars[mathRand.Intn(len(chars))]
 	}
 	return string(result)
 }
@@ -108,8 +108,8 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 			delay = 500 * time.Millisecond
 		}
 	case "network_issues":
-		if rand.Float32() < 0.1 { // 10% chance of network spike
-			delay = time.Duration(rand.Intn(3000)) * time.Millisecond
+		if mathRand.Float32() < 0.1 { // 10% chance of network spike
+			delay = time.Duration(mathRand.Intn(3000)) * time.Millisecond
 		} else {
 			delay = baseDelay
 		}
@@ -124,7 +124,7 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 		case FixedDelay:
 			delay = baseDelay
 		case RandomDelay:
-			delay = time.Duration(rand.Int63n(int64(baseDelay * 2)))
+			delay = time.Duration(mathRand.Int63n(int64(baseDelay * 2)))
 		case ProgressiveDelay:
 			delay = baseDelay * time.Duration(itemIndex/1000+1)
 		case BurstDelay:

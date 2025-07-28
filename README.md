@@ -17,6 +17,11 @@ This server helps consultants and developers:
 - **/huge_payload**: Returns a large JSON array (100,000 objects) in a single response for stress-testing REST clients
 - **/stream_payload**: Advanced streaming endpoint with configurable delays, patterns, and ServiceNow simulation modes
 
+### 🔐 **Security Features**
+- **Basic Authentication**: Optional HTTP Basic Authentication with CLI control
+- **Auto-generated Credentials**: Automatic username/password generation when not specified
+- **Secure Implementation**: Constant-time comparison to prevent timing attacks
+
 ### ⚙️ **Advanced Streaming Features**
 - **Configurable Item Count**: 1 to 1,000,000 items
 - **Delay Strategies**: Fixed, Random, Progressive, Burst patterns
@@ -62,20 +67,65 @@ Perfect for testing ServiceNow REST integrations that might fail with large data
    ```
 
 ### Usage
+
+#### Basic Usage (No Authentication)
 Run the server:
 ```sh
 ./gohugePayloadServer
 ```
 
-The server listens on port 8080 and provides detailed startup information with example URLs.
+#### With Authentication
+Enable basic authentication:
+```sh
+# Auto-generate username and password
+./gohugePayloadServer -auth
+
+# Use specific credentials
+./gohugePayloadServer -auth -user=myuser -pass=mypass
+```
+
+#### Command Line Options
+- `-auth`: Enable basic authentication (default: false)
+- `-user=<username>`: Set username (auto-generated if not specified)
+- `-pass=<password>`: Set password (auto-generated if not specified)
+
+The server listens on port 8080 and provides detailed startup information with example URLs and authentication details.
+
+## Deployment Options
+
+For production use or external access, see the **[DEPLOYMENT.md](DEPLOYMENT.md)** guide which covers:
+
+### 🚀 **Quick External Access**
+- **ngrok Integration**: Expose your local server to ServiceNow instances
+- Perfect for demos, training, and rapid prototyping
+- Easy setup with authentication and custom domains
+
+### 🐳 **Production-Like Environment** 
+- **Docker + MID-Server**: Complete containerized environment
+- ServiceNow MID-Server integration for secure connections
+- Load balancing with nginx and horizontal scaling
+- Enterprise-ready with security best practices
+
+### 📋 **What's Included**
+- Step-by-step setup instructions
+- ServiceNow configuration examples (Flow Actions, REST Messages)
+- Security considerations and best practices
+- Troubleshooting guides and performance optimization
+- Advanced configurations including Kubernetes deployment
 
 ## API Reference
 
 ### /huge_payload
 Returns 100,000 JSON objects in a single response (default, configurable via `count` parameter).
 
+**Without Authentication:**
 ```sh
 curl http://localhost:8080/huge_payload
+```
+
+**With Authentication:**
+```sh
+curl -u username:password http://localhost:8080/huge_payload
 ```
 
 ### /stream_payload
@@ -94,35 +144,42 @@ Advanced streaming endpoint with multiple configuration options.
 
 #### Examples
 
-**Basic streaming:**
+**Basic streaming (no auth):**
 ```sh
 curl "http://localhost:8080/stream_payload?count=1000"
 ```
 
+**Basic streaming (with auth):**
+```sh
+curl -u username:password "http://localhost:8080/stream_payload?count=1000"
+```
+
 **ServiceNow peak hours simulation:**
 ```sh
-curl "http://localhost:8080/stream_payload?scenario=peak_hours&servicenow=true&count=500"
+curl -u username:password "http://localhost:8080/stream_payload?scenario=peak_hours&servicenow=true&count=500"
 ```
 
 **Random delays for network testing:**
 ```sh
-curl "http://localhost:8080/stream_payload?delay=200ms&strategy=random&count=200"
+curl -u username:password "http://localhost:8080/stream_payload?delay=200ms&strategy=random&count=200"
 ```
 
 **Progressive performance degradation:**
 ```sh
-curl "http://localhost:8080/stream_payload?delay=50ms&strategy=progressive&count=1000"
+curl -u username:password "http://localhost:8080/stream_payload?delay=50ms&strategy=progressive&count=1000"
 ```
 
 **Maintenance window with spikes:**
 ```sh
-curl "http://localhost:8080/stream_payload?scenario=maintenance&count=2000"
+curl -u username:password "http://localhost:8080/stream_payload?scenario=maintenance&count=2000"
 ```
 
 **Burst pattern testing:**
 ```sh
-curl "http://localhost:8080/stream_payload?delay=10ms&strategy=burst&batch_size=25"
+curl -u username:password "http://localhost:8080/stream_payload?delay=10ms&strategy=burst&batch_size=25"
 ```
+
+> **Note:** Replace `username:password` with your actual credentials when authentication is enabled.
 
 ## ServiceNow Testing Scenarios
 
@@ -161,6 +218,8 @@ Tests cover:
 - All scenarios
 - Error conditions
 - Performance expectations
+- Authentication middleware
+- Security edge cases
 
 ## Development
 
@@ -183,10 +242,12 @@ Tests cover:
 ### Project Structure
 ```
 ├── main.go                           # Server setup and plugin registration
+├── auth.go                           # HTTP Basic Authentication middleware and utilities
 ├── huge_payload_handler.go           # Large single-response endpoint
 ├── streaming_payload_handler.go      # Advanced streaming endpoint
 ├── *_test.go                        # Comprehensive test suite
 ├── README.md                        # This file
+├── DEPLOYMENT.md                    # Deployment guide (ngrok, Docker, MID-Server)
 ├── CHANGELOG.md                     # Version history
 └── go.mod                           # Go module definition
 ```
@@ -212,6 +273,15 @@ Tests cover:
 - **REST Messages**: Consider using pagination for large datasets
 - **Scheduled Jobs**: Use smaller batch sizes for processing
 - **Performance**: Test during peak hours with realistic data volumes
+
+## AI Usage Disclosure
+
+This project was developed with assistance from AI coding tools:
+
+- **GitHub Copilot** - Used for code completion and boilerplate generation
+- **Claude Code** - Used for documentation, refactoring, and code review
+
+All AI-generated code has been reviewed, tested, and validated by human developers. The use of these tools helped accelerate development and improve code quality, particularly for Go language learning and comprehensive documentation.
 
 ## Contributing
 
