@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,18 @@ import (
 	"time"
 )
 
+// helper function to create authenticated request (shared with huge_payload tests)
+func createStreamAuthRequest(method, path string, username, password string) *http.Request {
+	req := httptest.NewRequest(method, path, nil)
+	if username != "" && password != "" {
+		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+		req.Header.Set("Authorization", "Basic "+auth)
+	}
+	return req
+}
+
 func TestStreamingPayloadHandler_Basic(t *testing.T) {
+	*enableAuth = false
 	req := httptest.NewRequest("GET", "/stream_payload", nil)
 	w := httptest.NewRecorder()
 
@@ -36,6 +48,7 @@ func TestStreamingPayloadHandler_Basic(t *testing.T) {
 }
 
 func TestStreamingPayloadHandler_WithParameters(t *testing.T) {
+	*enableAuth = false
 	// Test with count parameter
 	req := httptest.NewRequest("GET", "/stream_payload?count=5", nil)
 	w := httptest.NewRecorder()
@@ -61,6 +74,7 @@ func TestStreamingPayloadHandler_WithParameters(t *testing.T) {
 }
 
 func TestStreamingPayloadHandler_ServiceNowMode(t *testing.T) {
+	*enableAuth = false
 	req := httptest.NewRequest("GET", "/stream_payload?count=3&servicenow=true", nil)
 	w := httptest.NewRecorder()
 
@@ -97,6 +111,7 @@ func TestStreamingPayloadHandler_ServiceNowMode(t *testing.T) {
 }
 
 func TestStreamingPayloadHandler_InvalidCount(t *testing.T) {
+	*enableAuth = false
 	// Test with count too high
 	req := httptest.NewRequest("GET", "/stream_payload?count=2000000", nil)
 	w := httptest.NewRecorder()
@@ -110,6 +125,7 @@ func TestStreamingPayloadHandler_InvalidCount(t *testing.T) {
 }
 
 func TestStreamingPayloadHandler_DelayParameter(t *testing.T) {
+	*enableAuth = false
 	start := time.Now()
 
 	req := httptest.NewRequest("GET", "/stream_payload?count=3&delay=20ms", nil)
@@ -134,6 +150,7 @@ func TestStreamingPayloadHandler_Scenarios(t *testing.T) {
 			params.Add("count", "5")
 			params.Add("scenario", scenario)
 
+			*enableAuth = false
 			req := httptest.NewRequest("GET", "/stream_payload?"+params.Encode(), nil)
 			w := httptest.NewRecorder()
 
@@ -162,6 +179,7 @@ func TestStreamingPayloadHandler_DelayStrategies(t *testing.T) {
 			params.Add("delay", "1ms")
 			params.Add("strategy", strategy)
 
+			*enableAuth = false
 			req := httptest.NewRequest("GET", "/stream_payload?"+params.Encode(), nil)
 			w := httptest.NewRecorder()
 
@@ -172,5 +190,45 @@ func TestStreamingPayloadHandler_DelayStrategies(t *testing.T) {
 				t.Errorf("Expected status 200 for strategy %s, got %d", strategy, resp.StatusCode)
 			}
 		})
+	}
+}
+
+// TestStreamingPayloadHandler_AuthenticationRequired tests that authentication is required when enabled.
+func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
+	*enableAuth = true
+	authUsername = "streamuser"
+	authPassword = "streampass"
+	
+	// Test without credentials
+	req := httptest.NewRequest("GET", "/stream_payload", nil)
+	w := httptest.NewRecorder()
+	
+	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
+	resp := w.Result()
+	
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 without auth, got %d", resp.StatusCode)
+	}
+	
+	// Test with wrong credentials
+	req = createStreamAuthRequest("GET", "/stream_payload", "wrong", "credentials")
+	w = httptest.NewRecorder()
+	
+	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
+	resp = w.Result()
+	
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 with wrong auth, got %d", resp.StatusCode)
+	}
+	
+	// Test with correct credentials
+	req = createStreamAuthRequest("GET", "/stream_payload", "streamuser", "streampass")
+	w = httptest.NewRecorder()
+	
+	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
+	resp = w.Result()
+	
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 with correct auth, got %d", resp.StatusCode)
 	}
 }

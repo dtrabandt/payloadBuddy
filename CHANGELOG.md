@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Basic Authentication System**:
+  - HTTP Basic Authentication middleware with CLI control
+  - `-auth` flag to enable/disable authentication
+  - `-user` and `-pass` flags for custom credentials
+  - Auto-generation of secure username/password when not specified
+  - Constant-time comparison to prevent timing attacks
+  - Clear credential display on server startup
+  - Authentication status in endpoint examples
+
 - **Advanced Streaming Features**:
   - Configurable delay strategies (fixed, random, progressive, burst)
   - ServiceNow-specific test scenarios (peak_hours, maintenance, network_issues, database_load)
@@ -24,18 +33,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameter validation tests
   - Performance and timing tests
   - Test for huge_payload count parameter
+  - Authentication middleware tests (with/without credentials)
+  - Security edge case testing
 
 - **Improved Documentation**:
   - Complete API reference with examples
   - ServiceNow-specific use cases and best practices
   - Detailed startup messages with example URLs
   - Performance and troubleshooting guidelines
+  - Authentication setup and usage documentation
+  - Command-line options reference
 
 - **Developer Experience**:
   - Random seed initialization for consistent testing
   - Better error messages and validation
   - Detailed logging of registered endpoints
   - Enhanced project structure documentation
+  - Refactored authentication code into separate `auth.go` file
+  - Improved code organization and maintainability
 
 ### Changed
 - **StreamingPayloadHandler**: Complete rewrite with advanced features
@@ -47,7 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Main Application**: 
   - Enhanced startup messages with all available endpoints
   - Added random seed initialization
-  - Improved endpoint registration logging
+  - Improved endpoint registration logging  
+  - Command-line flag parsing and validation
+  - Authentication status display and credential output
+  - Refactored authentication logic into separate module for better organization
 
 - **Testing Framework**:
   - Expanded test coverage from basic functionality to comprehensive scenario testing

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,9 +14,22 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// helper function to create authenticated request
+func createAuthRequest(method, path string, username, password string) *http.Request {
+	req := httptest.NewRequest(method, path, nil)
+	if username != "" && password != "" {
+		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+		req.Header.Set("Authorization", "Basic "+auth)
+	}
+	return req
+}
+
 // TestHugePayloadHandler_JSONSchema validates the /payload endpoint response structure against a JSON schema.
 func TestHugePayloadHandler_JSONSchema(t *testing.T) {
 	fmt.Println("[TestHugePayloadHandler_JSONSchema] Starting test for /payload endpoint")
+	
+	// Test without auth (auth disabled by default in tests)
+	*enableAuth = false
 	req := httptest.NewRequest(http.MethodGet, "/payload", nil)
 	w := httptest.NewRecorder()
 
@@ -62,9 +76,10 @@ func TestHugePayloadHandler_JSONSchema(t *testing.T) {
 	}
 }
 
-// TestHugePayloadHandler_ResponseLength checks that the /payload endpoint returns exactly 100,000 items.
+// TestHugePayloadHandler_ResponseLength checks that the /payload endpoint returns exactly 10,000 items.
 func TestHugePayloadHandler_ResponseLength(t *testing.T) {
 	fmt.Println("[TestHugePayloadHandler_ResponseLength] Starting length test for /payload endpoint")
+	*enableAuth = false
 	req := httptest.NewRequest(http.MethodGet, "/payload", nil)
 	w := httptest.NewRecorder()
 
@@ -92,6 +107,7 @@ func TestHugePayloadHandler_ResponseLength(t *testing.T) {
 // TestHugePayloadHandler_PayloadContent checks the special contents of the payload.
 func TestHugePayloadHandler_PayloadContent(t *testing.T) {
 	fmt.Println("[TestHugePayloadHandler_PayloadContent] Starting content test for /payload endpoint")
+	*enableAuth = false
 	req := httptest.NewRequest(http.MethodGet, "/huge_payload", nil)
 	w := httptest.NewRecorder()
 
@@ -120,6 +136,7 @@ func TestHugePayloadHandler_PayloadContent(t *testing.T) {
 
 // TestHugePayloadHandler_CountParameter checks that the /huge_payload endpoint respects the count query parameter.
 func TestHugePayloadHandler_CountParameter(t *testing.T) {
+	*enableAuth = false
 	req := httptest.NewRequest("GET", "/huge_payload?count=5", nil)
 	w := httptest.NewRecorder()
 
@@ -139,5 +156,45 @@ func TestHugePayloadHandler_CountParameter(t *testing.T) {
 
 	if len(items) != 5 {
 		t.Errorf("Expected 5 items, got %d", len(items))
+	}
+}
+
+// TestHugePayloadHandler_AuthenticationRequired tests that authentication is required when enabled.
+func TestHugePayloadHandler_AuthenticationRequired(t *testing.T) {
+	*enableAuth = true
+	authUsername = "testuser"
+	authPassword = "testpass"
+	
+	// Test without credentials
+	req := httptest.NewRequest("GET", "/huge_payload", nil)
+	w := httptest.NewRecorder()
+	
+	basicAuthMiddleware(HugePayloadHandler)(w, req)
+	resp := w.Result()
+	
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 without auth, got %d", resp.StatusCode)
+	}
+	
+	// Test with wrong credentials
+	req = createAuthRequest("GET", "/huge_payload", "wrong", "credentials")
+	w = httptest.NewRecorder()
+	
+	basicAuthMiddleware(HugePayloadHandler)(w, req)
+	resp = w.Result()
+	
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 with wrong auth, got %d", resp.StatusCode)
+	}
+	
+	// Test with correct credentials
+	req = createAuthRequest("GET", "/huge_payload", "testuser", "testpass")
+	w = httptest.NewRecorder()
+	
+	basicAuthMiddleware(HugePayloadHandler)(w, req)
+	resp = w.Result()
+	
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 with correct auth, got %d", resp.StatusCode)
 	}
 }
