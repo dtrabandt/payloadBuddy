@@ -247,6 +247,7 @@ Tests cover:
 ├── streaming_payload_handler.go      # Advanced streaming endpoint
 ├── *_test.go                        # Comprehensive test suite
 ├── README.md                        # This file
+├── CLAUDE.md                        # Development guidance for Claude Code instances
 ├── DEPLOYMENT.md                    # Deployment guide (ngrok, Docker, MID-Server)
 ├── CHANGELOG.md                     # Version history
 └── go.mod                           # Go module definition
