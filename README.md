@@ -14,8 +14,10 @@ This server helps consultants and developers:
 ## Features
 
 ### 🚀 **Core Endpoints**
-- **/rest_payload**: Returns a REST reponse includen a large JSON array (100,000 objects) in a single response for stress-testing REST clients
+- **/rest_payload**: Returns a REST response with a large JSON array (100,000 objects) in a single response for stress-testing REST clients
 - **/stream_payload**: Advanced streaming endpoint with configurable delays, patterns, and ServiceNow simulation modes
+- **/openapi.json**: Complete OpenAPI 3.1.1 specification for all endpoints
+- **/swagger**: Interactive Swagger UI for API documentation and testing
 
 ### 🔐 **Security Features**
 - **Basic Authentication**: Optional HTTP Basic Authentication with CLI control
@@ -32,8 +34,9 @@ This server helps consultants and developers:
 
 ### 🏗️ **Architecture**
 - **Plugin System**: Easily extend with new payload handlers via `PayloadPlugin` interface
-- **Separation of Concerns**: Each handler in its own file
-- **Comprehensive Testing**: Unit tests for all scenarios and edge cases
+- **OpenAPI 3.1.1 Integration**: Automatic documentation generation from plugin specifications
+- **Separation of Concerns**: Each handler in its own file with self-documenting capabilities
+- **Comprehensive Testing**: Unit tests for all scenarios, edge cases, and API documentation
 
 ## Use Cases
 
@@ -115,6 +118,10 @@ For production use or external access, see the **[DEPLOYMENT.md](DEPLOYMENT.md)*
 
 ## API Reference
 
+> 📖 **Interactive Documentation**: Visit `/swagger` in your browser for a complete interactive API explorer with request/response examples and the ability to test endpoints directly.
+
+> 🔧 **OpenAPI Specification**: The complete OpenAPI 3.1.1 specification is available at `/openapi.json` for programmatic access and integration with tools like Postman, Insomnia, or code generators.
+
 ### /rest_payload
 Returns 100,000 JSON objects in a single response (default, configurable via `count` parameter).
 
@@ -179,6 +186,26 @@ curl -u username:password "http://localhost:8080/stream_payload?scenario=mainten
 curl -u username:password "http://localhost:8080/stream_payload?delay=10ms&strategy=burst&batch_size=25"
 ```
 
+### /openapi.json
+Returns the complete OpenAPI 3.1.1 specification for all endpoints.
+
+**Example:**
+```sh
+# Get the OpenAPI specification
+curl http://localhost:8080/openapi.json
+
+# Save it to a file for tools like Postman
+curl http://localhost:8080/openapi.json > payloadBuddy-api.json
+```
+
+### /swagger
+Interactive Swagger UI for exploring and testing the API.
+
+**Usage:**
+1. Start the server: `./payloadBuddy`
+2. Open your browser: `http://localhost:8080/swagger`
+3. Explore endpoints, view schemas, and test requests directly in your browser
+
 > **Note:** Replace `username:password` with your actual credentials when authentication is enabled.
 
 ## ServiceNow Testing Scenarios
@@ -230,6 +257,18 @@ Tests cover:
    
    func (m MyPlugin) Path() string { return "/my_endpoint" }
    func (m MyPlugin) Handler() http.HandlerFunc { return MyHandler }
+   func (m MyPlugin) OpenAPISpec() OpenAPIPathSpec {
+       return OpenAPIPathSpec{
+           Path: "/my_endpoint",
+           Operation: OpenAPIPath{
+               Get: &OpenAPIOperation{
+                   Summary: "My custom endpoint",
+                   Description: "Description of what this endpoint does",
+                   // ... complete OpenAPI specification
+               },
+           },
+       }
+   }
    ```
 
 2. Register in `init()`:
@@ -239,12 +278,16 @@ Tests cover:
    }
    ```
 
+3. Your endpoint will automatically appear in `/openapi.json` and `/swagger`
+
 ### Project Structure
 ```
 ├── main.go                          # Server setup and plugin registration
 ├── auth.go                          # HTTP Basic Authentication middleware and utilities
+├── openapi.go                       # OpenAPI 3.1.1 data structures and types
 ├── rest_payload_handler.go          # Large single-response endpoint
 ├── streaming_payload_handler.go     # Advanced streaming endpoint
+├── documentation_handler.go         # OpenAPI specification and Swagger UI endpoints
 ├── *_test.go                        # Comprehensive test suite
 ├── README.md                        # This file
 ├── CLAUDE.md                        # Development guidance for Claude Code instances

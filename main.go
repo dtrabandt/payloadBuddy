@@ -11,10 +11,11 @@ import (
 
 // PayloadPlugin is an interface that must be implemented by
 // any plugin that wants to register a payload handler.
-// It provides the Path and Handler methods for the HTTP endpoint.
+// It provides the Path, Handler, and OpenAPISpec methods for the HTTP endpoint.
 type PayloadPlugin interface {
 	Path() string
 	Handler() http.HandlerFunc
+	OpenAPISpec() OpenAPIPathSpec
 }
 
 // plugins holds the list of registered payload plugins.
@@ -57,6 +58,8 @@ func main() {
 	fmt.Println("\nAvailable endpoints:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/openapi.json", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/swagger", port)))
 
 	fmt.Println("\nRest Payload examples:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
