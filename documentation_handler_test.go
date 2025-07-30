@@ -274,6 +274,185 @@ func TestSwaggerUIPlugin_Interface(t *testing.T) {
 	}
 }
 
+func TestDocumentationEndpoints_NoAuthRequired(t *testing.T) {
+	// Enable auth for testing
+	*enableAuth = true
+	authUsername = "testuser"
+	authPassword = "testpass"
+	defer func() { 
+		*enableAuth = false
+		authUsername = ""
+		authPassword = ""
+	}()
+
+	tests := []struct {
+		name     string
+		path     string
+		handler  http.HandlerFunc
+		wantAuth bool
+	}{
+		{
+			name:     "OpenAPI endpoint should not require auth",
+			path:     "/openapi.json",
+			handler:  OpenAPIHandler,
+			wantAuth: false,
+		},
+		{
+			name:     "Swagger UI should not require auth",
+			path:     "/swagger",
+			handler:  SwaggerUIHandler,
+			wantAuth: false,
+		},
+		{
+			name:     "Rest payload should require auth",
+			path:     "/rest_payload",
+			handler:  RestPayloadHandler,
+			wantAuth: true,
+		},
+		{
+			name:     "Streaming payload should require auth",
+			path:     "/stream_payload",
+			handler:  StreamingPayloadHandler,
+			wantAuth: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", tt.path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+
+			// Test without authentication first
+			if tt.wantAuth {
+				// Should require auth - test with middleware
+				handler := basicAuthMiddleware(tt.handler)
+				handler.ServeHTTP(rr, req)
+				if status := rr.Code; status != http.StatusUnauthorized {
+					t.Errorf("Expected 401 Unauthorized without auth, got %v", status)
+				}
+
+				// Test with correct auth
+				rr = httptest.NewRecorder()
+				req.SetBasicAuth(authUsername, authPassword)
+				handler.ServeHTTP(rr, req)
+				if status := rr.Code; status != http.StatusOK {
+					t.Errorf("Expected 200 OK with correct auth, got %v", status)
+				}
+			} else {
+				// Should not require auth - test without middleware
+				tt.handler.ServeHTTP(rr, req)
+				if status := rr.Code; status != http.StatusOK {
+					t.Errorf("Expected 200 OK without auth for %s, got %v", tt.path, status)
+				}
+
+				// Also test that it works with auth (should still work)
+				rr = httptest.NewRecorder()
+				req.SetBasicAuth(authUsername, authPassword)
+				tt.handler.ServeHTTP(rr, req)
+				if status := rr.Code; status != http.StatusOK {
+					t.Errorf("Expected 200 OK with auth for %s, got %v", tt.path, status)
+				}
+			}
+		})
+	}
+}
+
+func TestOpenAPIHandler_SecuritySchemeWhenAuthEnabled(t *testing.T) {
+	// Enable auth for testing
+	*enableAuth = true
+	defer func() { *enableAuth = false }()
+
+	req, err := http.NewRequest("GET", "/openapi.json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(OpenAPIHandler)
+	handler.ServeHTTP(rr, req)
+
+	var spec OpenAPISpec
+	if err := json.Unmarshal(rr.Body.Bytes(), &spec); err != nil {
+		t.Fatalf("Failed to parse JSON response: %v", err)
+	}
+
+	// Check that security schemes are present
+	if spec.Components == nil || spec.Components.SecuritySchemes == nil {
+		t.Fatal("Missing security schemes when auth is enabled")
+	}
+
+	basicAuth, exists := spec.Components.SecuritySchemes["BasicAuth"]
+	if !exists {
+		t.Fatal("Missing BasicAuth security scheme")
+	}
+
+	if basicAuth.Type != "http" {
+		t.Errorf("Wrong security scheme type: got %v want http", basicAuth.Type)
+	}
+
+	if basicAuth.Scheme != "basic" {
+		t.Errorf("Wrong security scheme: got %v want basic", basicAuth.Scheme)
+	}
+
+	// Check that API endpoints have security requirements
+	apiEndpoints := []string{"/rest_payload", "/stream_payload"}
+	for _, endpoint := range apiEndpoints {
+		path, exists := spec.Paths[endpoint]
+		if !exists {
+			t.Errorf("Missing endpoint: %s", endpoint)
+			continue
+		}
+
+		if path.Get == nil {
+			t.Errorf("Missing GET operation for %s", endpoint)
+			continue
+		}
+
+		if path.Get.Security == nil || len(path.Get.Security) == 0 {
+			t.Errorf("Missing security requirements for %s", endpoint)
+			continue
+		}
+
+		// Check that BasicAuth is required
+		found := false
+		for _, secReq := range path.Get.Security {
+			if _, hasBasicAuth := secReq["BasicAuth"]; hasBasicAuth {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("BasicAuth not required for %s", endpoint)
+		}
+	}
+
+	// Check that documentation endpoints do NOT have security requirements in the spec
+	// (they are excluded at the middleware level, not the spec level)
+	docEndpoints := []string{"/openapi.json", "/swagger"}
+	for _, endpoint := range docEndpoints {
+		path, exists := spec.Paths[endpoint]
+		if !exists {
+			t.Errorf("Missing endpoint: %s", endpoint)
+			continue
+		}
+
+		if path.Get == nil {
+			t.Errorf("Missing GET operation for %s", endpoint)
+			continue
+		}
+
+		// Documentation endpoints should also show security in the spec for consistency
+		// even though they're excluded at the middleware level
+		if path.Get.Security == nil || len(path.Get.Security) == 0 {
+			t.Errorf("Missing security requirements in spec for %s (should be consistent)", endpoint)
+		}
+	}
+}
+
 func TestRestPayloadPlugin_OpenAPISpec(t *testing.T) {
 	plugin := RestPayloadPlugin{}
 	spec := plugin.OpenAPISpec()

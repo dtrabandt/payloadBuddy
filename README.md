@@ -23,6 +23,7 @@ This server helps consultants and developers:
 - **Basic Authentication**: Optional HTTP Basic Authentication with CLI control
 - **Auto-generated Credentials**: Automatic username/password generation when not specified
 - **Secure Implementation**: Constant-time comparison to prevent timing attacks
+- **Documentation Access**: API documentation endpoints (`/swagger`, `/openapi.json`) remain publicly accessible even when authentication is enabled
 
 ### ⚙️ **Advanced Streaming Features**
 - **Configurable Item Count**: 1 to 1,000,000 items
@@ -86,6 +87,8 @@ Enable basic authentication:
 # Use specific credentials
 ./payloadBuddy -auth -user=myuser -pass=mypass
 ```
+
+**Note**: When authentication is enabled, API endpoints (`/rest_payload`, `/stream_payload`) require credentials, but documentation endpoints (`/swagger`, `/openapi.json`) remain publicly accessible for better developer experience.
 
 #### Command Line Options
 - `-auth`: Enable basic authentication (default: false)
@@ -191,20 +194,25 @@ Returns the complete OpenAPI 3.1.1 specification for all endpoints.
 
 **Example:**
 ```sh
-# Get the OpenAPI specification
+# Get the OpenAPI specification (no authentication required)
 curl http://localhost:8080/openapi.json
 
 # Save it to a file for tools like Postman
 curl http://localhost:8080/openapi.json > payloadBuddy-api.json
 ```
 
+**Note**: This endpoint is always publicly accessible, even when authentication is enabled.
+
 ### /swagger
 Interactive Swagger UI for exploring and testing the API.
 
 **Usage:**
-1. Start the server: `./payloadBuddy`
-2. Open your browser: `http://localhost:8080/swagger`
+1. Start the server: `./payloadBuddy` or `./payloadBuddy -auth`
+2. Open your browser: `http://localhost:8080/swagger` (no authentication required)
 3. Explore endpoints, view schemas, and test requests directly in your browser
+4. When authentication is enabled, use the "Authorize" button in Swagger UI to enter credentials for testing protected endpoints
+
+**Note**: The Swagger UI is always publicly accessible, even when authentication is enabled. This allows you to explore the API documentation and then authenticate within Swagger UI to test protected endpoints.
 
 > **Note:** Replace `username:password` with your actual credentials when authentication is enabled.
 

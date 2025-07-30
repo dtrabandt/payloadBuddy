@@ -41,10 +41,17 @@ func main() {
 	// Setup authentication if enabled
 	setupAuthentication()
 
-	// Register plugins with authentication middleware
+	// Register plugins with conditional authentication middleware
 	for _, p := range plugins {
-		http.HandleFunc(p.Path(), basicAuthMiddleware(p.Handler()))
-		fmt.Printf("Registered endpoint: %s\n", p.Path())
+		path := p.Path()
+		// Exclude documentation endpoints from authentication for better UX
+		if path == "/swagger" || path == "/openapi.json" {
+			http.HandleFunc(path, p.Handler())
+			fmt.Printf("Registered endpoint: %s (no auth)\n", path)
+		} else {
+			http.HandleFunc(path, basicAuthMiddleware(p.Handler()))
+			fmt.Printf("Registered endpoint: %s\n", path)
+		}
 	}
 
 	port := "8080"

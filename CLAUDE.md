@@ -71,9 +71,15 @@ This server is specifically designed for ServiceNow REST integration testing:
 ### Authentication Flow
 1. Command-line flags parsed in main()
 2. `setupAuthentication()` configures credentials (auto-generated or custom)
-3. `basicAuthMiddleware()` wraps all plugin handlers
+3. `basicAuthMiddleware()` wraps API endpoints (excludes documentation endpoints)
 4. Credentials displayed on startup for development use
-5. All endpoints protected when `-auth` flag is used
+5. API endpoints protected when `-auth` flag is used (documentation endpoints remain public)
+
+### Authentication Exclusions
+- **Documentation endpoints are public**: `/swagger` and `/openapi.json` are excluded from authentication
+- **API endpoints require auth**: `/rest_payload` and `/stream_payload` require authentication when `-auth` is enabled
+- **Rationale**: Standard practice to keep API documentation publicly accessible while protecting data endpoints
+- **Implementation**: Conditional middleware application in main.go based on endpoint path
 
 ### Testing Strategy
 Tests are structured to handle both authenticated and non-authenticated scenarios:
