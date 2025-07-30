@@ -14,7 +14,7 @@ This server helps consultants and developers:
 ## Features
 
 ### 🚀 **Core Endpoints**
-- **/huge_payload**: Returns a large JSON array (100,000 objects) in a single response for stress-testing REST clients
+- **/rest_payload**: Returns a REST reponse includen a large JSON array (100,000 objects) in a single response for stress-testing REST clients
 - **/stream_payload**: Advanced streaming endpoint with configurable delays, patterns, and ServiceNow simulation modes
 
 ### 🔐 **Security Features**
@@ -115,17 +115,17 @@ For production use or external access, see the **[DEPLOYMENT.md](DEPLOYMENT.md)*
 
 ## API Reference
 
-### /huge_payload
+### /rest_payload
 Returns 100,000 JSON objects in a single response (default, configurable via `count` parameter).
 
 **Without Authentication:**
 ```sh
-curl http://localhost:8080/huge_payload
+curl http://localhost:8080/rest_payload
 ```
 
 **With Authentication:**
 ```sh
-curl -u username:password http://localhost:8080/huge_payload
+curl -u username:password http://localhost:8080/rest_payload
 ```
 
 ### /stream_payload
@@ -241,10 +241,10 @@ Tests cover:
 
 ### Project Structure
 ```
-├── main.go                           # Server setup and plugin registration
-├── auth.go                           # HTTP Basic Authentication middleware and utilities
-├── huge_payload_handler.go           # Large single-response endpoint
-├── streaming_payload_handler.go      # Advanced streaming endpoint
+├── main.go                          # Server setup and plugin registration
+├── auth.go                          # HTTP Basic Authentication middleware and utilities
+├── rest_payload_handler.go          # Large single-response endpoint
+├── streaming_payload_handler.go     # Advanced streaming endpoint
 ├── *_test.go                        # Comprehensive test suite
 ├── README.md                        # This file
 ├── CLAUDE.md                        # Development guidance for Claude Code instances

@@ -33,7 +33,7 @@ func registerPlugin(p PayloadPlugin) {
 func main() {
 	// Parse command line flags
 	flag.Parse()
-	
+
 	// Initialize random seed for delay variations in streaming
 	mathRand.Seed(time.Now().UnixNano())
 
@@ -50,17 +50,17 @@ func main() {
 	addr := ":" + port
 
 	fmt.Printf("\nStarting payloadBuddy on http://localhost:%s\n", port)
-	
+
 	// Print authentication info if enabled
 	printAuthenticationInfo()
-	
+
 	fmt.Println("\nAvailable endpoints:")
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
 
-	fmt.Println("\nHuge Payload examples:")
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/huge_payload?count=5000", port)))
+	fmt.Println("\nRest Payload examples:")
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload?count=5000", port)))
 
 	fmt.Println("\nStreaming examples:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))
@@ -83,14 +83,14 @@ func main() {
 	}
 }
 
-// HugePayloadPlugin implements PayloadPlugin for large JSON payloads
-type HugePayloadPlugin struct{}
+// RestPayloadPlugin implements PayloadPlugin for large JSON payloads
+type RestPayloadPlugin struct{}
 
-// Path returns the HTTP path for the huge payload endpoint.
-func (h HugePayloadPlugin) Path() string { return "/huge_payload" }
+// Path returns the HTTP path for the rest payload endpoint.
+func (h RestPayloadPlugin) Path() string { return "/rest_payload" }
 
-// Handler returns the handler function for the huge payload endpoint.
-func (h HugePayloadPlugin) Handler() http.HandlerFunc { return HugePayloadHandler }
+// Handler returns the handler function for the rest payload endpoint.
+func (h RestPayloadPlugin) Handler() http.HandlerFunc { return RestPayloadHandler }
 
 // StreamingPayloadPlugin implements PayloadPlugin for streaming data
 type StreamingPayloadPlugin struct{}
@@ -102,6 +102,6 @@ func (s StreamingPayloadPlugin) Path() string { return "/stream_payload" }
 func (s StreamingPayloadPlugin) Handler() http.HandlerFunc { return StreamingPayloadHandler }
 
 func init() {
-	registerPlugin(HugePayloadPlugin{})
+	registerPlugin(RestPayloadPlugin{})
 	registerPlugin(StreamingPayloadPlugin{})
 }

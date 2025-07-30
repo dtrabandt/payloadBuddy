@@ -63,7 +63,7 @@ ngrok http 8080 --domain=your-custom-domain.ngrok.io
 
 // Example REST Message Configuration
 var r = new sn_ws.RESTMessageV2();
-r.setEndpoint('https://abc123.ngrok.io/huge_payload');
+r.setEndpoint('https://abc123.ngrok.io/rest_payload');
 r.setHttpMethod('GET');
 
 // Add authentication if enabled
@@ -151,7 +151,7 @@ gr.query();
 
 while (gr.next()) {
     var restClient = new sn_ws.RESTMessageV2();
-    restClient.setEndpoint('https://your-ngrok-url.ngrok.io/huge_payload');
+    restClient.setEndpoint('https://your-ngrok-url.ngrok.io/rest_payload');
     restClient.setHttpMethod('GET');
     restClient.setQueryParameter('count', '5000');
     
@@ -295,7 +295,7 @@ services:
     networks:
       - servicenow-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/huge_payload?count=1"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/rest_payload?count=1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -431,12 +431,12 @@ PayloadServerUtil.prototype = {
         this.baseUrl = 'http://payloadserver:8080';
     },
 
-    testHugePayload: function(count) {
+    testRestPayload: function(count) {
         var probe = new MIDRequest();
         probe.setName('JavascriptRequest');
         probe.setMIDServer(this.midServer);
         
-        var script = 'var url = "' + this.baseUrl + '/huge_payload?count=' + count + '";';
+        var script = 'var url = "' + this.baseUrl + '/rest_payload?count=' + count + '";';
         script += 'var request = new XMLHttpRequest();';
         script += 'request.open("GET", url, false);';
         script += 'request.setRequestHeader("Authorization", "Basic " + btoa("testuser:testpass123"));';
@@ -478,7 +478,7 @@ PayloadServerUtil.prototype = {
     var util = new PayloadServerUtil();
     
     try {
-        var response = util.testHugePayload(inputs.record_count || 1000);
+        var response = util.testRestPayload(inputs.record_count || 1000);
         
         outputs.success = response.getValue('status') == '200';
         outputs.response_body = response.getValue('response');
@@ -505,7 +505,7 @@ PayloadServerUtil.prototype = {
 docker stats
 
 # Check container health
-docker-compose exec payloadserver wget -qO- http://localhost:8080/huge_payload?count=1
+docker-compose exec payloadserver wget -qO- http://localhost:8080/rest_payload?count=1
 
 # View real-time logs
 docker-compose logs -f --tail=100 payloadserver
@@ -524,7 +524,7 @@ docker-compose up -d --scale payloadserver=5
 
 # Test load balancing
 for i in {1..10}; do
-    curl -u testuser:testpass123 http://localhost/huge_payload?count=100
+    curl -u testuser:testpass123 http://localhost/rest_payload?count=100
 done
 
 # Monitor nginx logs
@@ -592,7 +592,7 @@ ngrok http 8080 --log=debug
 ```javascript
 // Test connectivity from ServiceNow
 var r = new sn_ws.RESTMessageV2();
-r.setEndpoint('https://your-ngrok-url.ngrok.io/huge_payload?count=1');
+r.setEndpoint('https://your-ngrok-url.ngrok.io/rest_payload?count=1');
 r.setHttpTimeout(30000);
 var response = r.execute();
 gs.info('Status: ' + response.getStatusCode());
@@ -621,7 +621,7 @@ docker-compose logs midserver | grep -i error
 
 # Test network connectivity
 docker-compose exec midserver ping payloadserver
-docker-compose exec midserver curl http://payloadserver:8080/huge_payload?count=1
+docker-compose exec midserver curl http://payloadserver:8080/rest_payload?count=1
 ```
 
 #### Performance Issues

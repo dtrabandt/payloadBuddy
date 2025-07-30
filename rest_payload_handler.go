@@ -12,12 +12,12 @@ type Item struct {
 	Name string `json:"name"` // Name of the item (static "Object" in this example)
 }
 
-// HugePayloadHandler handles HTTP GET requests to the /payload endpoint.
+// RestPayloadHandler handles HTTP GET requests to the /payload endpoint.
 //
 // It generates a slice of 10000 Item objects and returns them as a JSON array.
 // This endpoint is primarily used for testing REST client implementations and
 // observing behavior when consuming very large JSON responses.
-func HugePayloadHandler(w http.ResponseWriter, r *http.Request) {
+func RestPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Set the Content-Type header so clients interpret the response as JSON.
 	w.Header().Set("Content-Type", "application/json")
 

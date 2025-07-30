@@ -1,4 +1,4 @@
-// handler_test.go
+// rest_payload_handler_test.go
 
 package main
 
@@ -24,26 +24,26 @@ func createAuthRequest(method, path string, username, password string) *http.Req
 	return req
 }
 
-// TestHugePayloadHandler_JSONSchema validates the /payload endpoint response structure against a JSON schema.
-func TestHugePayloadHandler_JSONSchema(t *testing.T) {
-	fmt.Println("[TestHugePayloadHandler_JSONSchema] Starting test for /payload endpoint")
-	
+// TestRestPayloadHandler_JSONSchema validates the /rest_payload endpoint response structure against a JSON schema.
+func TestRestPayloadHandler_JSONSchema(t *testing.T) {
+	fmt.Println("[TestRestPayloadHandler_JSONSchema] Starting test for /rest_payload endpoint")
+
 	// Test without auth (auth disabled by default in tests)
 	*enableAuth = false
-	req := httptest.NewRequest(http.MethodGet, "/payload", nil)
+	req := httptest.NewRequest(http.MethodGet, "/rest_payload", nil)
 	w := httptest.NewRecorder()
 
-	HugePayloadHandler(w, req)
+	RestPayloadHandler(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("[TestHugePayloadHandler_JSONSchema] Failed to read response body: %v\n", err)
+		fmt.Printf("[TestRestPayloadHandler_JSONSchema] Failed to read response body: %v\n", err)
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	fmt.Printf("[TestHugePayloadHandler_JSONSchema] Response body size: %d bytes\n", len(bodyBytes))
+	fmt.Printf("[TestRestPayloadHandler_JSONSchema] Response body size: %d bytes\n", len(bodyBytes))
 
 	schema := `{
         "type": "array",
@@ -62,28 +62,28 @@ func TestHugePayloadHandler_JSONSchema(t *testing.T) {
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
-		fmt.Printf("[TestHugePayloadHandler_JSONSchema] Schema validation failed: %v\n", err)
+		fmt.Printf("[TestRestPayloadHandler_JSONSchema] Schema validation failed: %v\n", err)
 		t.Fatalf("Schema validation failed: %v", err)
 	}
 	if !result.Valid() {
-		fmt.Println("[TestHugePayloadHandler_JSONSchema] Schema validation errors:")
+		fmt.Println("[TestRestPayloadHandler_JSONSchema] Schema validation errors:")
 		for _, err := range result.Errors() {
 			fmt.Printf("  %s\n", err)
 			t.Errorf("Schema error: %s", err)
 		}
 	} else {
-		fmt.Println("[TestHugePayloadHandler_JSONSchema] Schema validation passed.")
+		fmt.Println("[TestRestPayloadHandler_JSONSchema] Schema validation passed.")
 	}
 }
 
-// TestHugePayloadHandler_ResponseLength checks that the /payload endpoint returns exactly 10,000 items.
-func TestHugePayloadHandler_ResponseLength(t *testing.T) {
-	fmt.Println("[TestHugePayloadHandler_ResponseLength] Starting length test for /payload endpoint")
+// TestRestPayloadHandler_ResponseLength checks that the /rest_payload endpoint returns exactly 10,000 items.
+func TestRestPayloadHandler_ResponseLength(t *testing.T) {
+	fmt.Println("[TestRestPayloadHandler_ResponseLength] Starting length test for /rest_payload endpoint")
 	*enableAuth = false
-	req := httptest.NewRequest(http.MethodGet, "/payload", nil)
+	req := httptest.NewRequest(http.MethodGet, "/rest_payload", nil)
 	w := httptest.NewRecorder()
 
-	HugePayloadHandler(w, req)
+	RestPayloadHandler(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -93,25 +93,25 @@ func TestHugePayloadHandler_ResponseLength(t *testing.T) {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		fmt.Printf("[TestHugePayloadHandler_ResponseLength] Failed to decode JSON: %v\n", err)
+		fmt.Printf("[TestRestPayloadHandler_ResponseLength] Failed to decode JSON: %v\n", err)
 		t.Fatalf("Failed to decode JSON: %v", err)
 	}
-	fmt.Printf("[TestHugePayloadHandler_ResponseLength] Decoded payload length: %d\n", len(payload))
+	fmt.Printf("[TestRestPayloadHandler_ResponseLength] Decoded payload length: %d\n", len(payload))
 	if len(payload) != 10000 {
 		t.Errorf("Expected payload length 10000, got %d", len(payload))
 	} else {
-		fmt.Println("[TestHugePayloadHandler_ResponseLength] Payload length is correct.")
+		fmt.Println("[TestRestPayloadHandler_ResponseLength] Payload length is correct.")
 	}
 }
 
-// TestHugePayloadHandler_PayloadContent checks the special contents of the payload.
-func TestHugePayloadHandler_PayloadContent(t *testing.T) {
-	fmt.Println("[TestHugePayloadHandler_PayloadContent] Starting content test for /payload endpoint")
+// TestRestPayloadHandler_PayloadContent checks the special contents of the payload.
+func TestRestPayloadHandler_PayloadContent(t *testing.T) {
+	fmt.Println("[TestRestPayloadHandler_PayloadContent] Starting content test for /rest_payload endpoint")
 	*enableAuth = false
-	req := httptest.NewRequest(http.MethodGet, "/huge_payload", nil)
+	req := httptest.NewRequest(http.MethodGet, "/rest_payload", nil)
 	w := httptest.NewRecorder()
 
-	HugePayloadHandler(w, req)
+	RestPayloadHandler(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -121,26 +121,26 @@ func TestHugePayloadHandler_PayloadContent(t *testing.T) {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		fmt.Printf("[TestHugePayloadHandler_PayloadContent] Failed to decode JSON: %v\n", err)
+		fmt.Printf("[TestRestPayloadHandler_PayloadContent] Failed to decode JSON: %v\n", err)
 		t.Fatalf("Failed to decode JSON: %v", err)
 	}
 
 	if payload[0].ID != 1 {
 		t.Errorf("First item ID is incorrect: expected 1, got %d", payload[0].ID)
 	} else {
-		fmt.Println("[TestHugePayloadHandler_PayloadContent] First item ID is correct.")
+		fmt.Println("[TestRestPayloadHandler_PayloadContent] First item ID is correct.")
 	}
 
-	fmt.Println("[TestHugePayloadHandler_PayloadContent] All items have correct ids.")
+	fmt.Println("[TestRestPayloadHandler_PayloadContent] All items have correct ids.")
 }
 
-// TestHugePayloadHandler_CountParameter checks that the /huge_payload endpoint respects the count query parameter.
-func TestHugePayloadHandler_CountParameter(t *testing.T) {
+// TestRestPayloadHandler_CountParameter checks that the /rest_payload endpoint respects the count query parameter.
+func TestRestPayloadHandler_CountParameter(t *testing.T) {
 	*enableAuth = false
-	req := httptest.NewRequest("GET", "/huge_payload?count=5", nil)
+	req := httptest.NewRequest("GET", "/rest_payload?count=5", nil)
 	w := httptest.NewRecorder()
 
-	HugePayloadHandler(w, req)
+	RestPayloadHandler(w, req)
 	resp := w.Result()
 
 	if resp.StatusCode != http.StatusOK {
@@ -159,41 +159,41 @@ func TestHugePayloadHandler_CountParameter(t *testing.T) {
 	}
 }
 
-// TestHugePayloadHandler_AuthenticationRequired tests that authentication is required when enabled.
-func TestHugePayloadHandler_AuthenticationRequired(t *testing.T) {
+// TestRestPayloadHandler_AuthenticationRequired tests that authentication is required when enabled.
+func TestRestPayloadHandler_AuthenticationRequired(t *testing.T) {
 	*enableAuth = true
 	authUsername = "testuser"
 	authPassword = "testpass"
-	
+
 	// Test without credentials
-	req := httptest.NewRequest("GET", "/huge_payload", nil)
+	req := httptest.NewRequest("GET", "/rest_payload", nil)
 	w := httptest.NewRecorder()
-	
-	basicAuthMiddleware(HugePayloadHandler)(w, req)
+
+	basicAuthMiddleware(RestPayloadHandler)(w, req)
 	resp := w.Result()
-	
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 without auth, got %d", resp.StatusCode)
 	}
-	
+
 	// Test with wrong credentials
-	req = createAuthRequest("GET", "/huge_payload", "wrong", "credentials")
+	req = createAuthRequest("GET", "/rest_payload", "wrong", "credentials")
 	w = httptest.NewRecorder()
-	
-	basicAuthMiddleware(HugePayloadHandler)(w, req)
+
+	basicAuthMiddleware(RestPayloadHandler)(w, req)
 	resp = w.Result()
-	
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 with wrong auth, got %d", resp.StatusCode)
 	}
-	
+
 	// Test with correct credentials
-	req = createAuthRequest("GET", "/huge_payload", "testuser", "testpass")
+	req = createAuthRequest("GET", "/rest_payload", "testuser", "testpass")
 	w = httptest.NewRecorder()
-	
-	basicAuthMiddleware(HugePayloadHandler)(w, req)
+
+	basicAuthMiddleware(RestPayloadHandler)(w, req)
 	resp = w.Result()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200 with correct auth, got %d", resp.StatusCode)
 	}

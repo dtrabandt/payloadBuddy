@@ -25,7 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable batch sizes for flushing
   - Parameter validation and error handling
 
-- **HugePayloadHandler**: Added support for `count` query parameter (default 10,000, up to 1,000,000)
+- **RestPayloadHandler**:
+  - Renamed the endpoint from HugePayload to RestPayload as well the url from /huge_payload to /rest_payload
+  - Added support for `count` query parameter (default 10,000, up to 1,000,000)
 
 - **Enhanced Testing**:
   - Comprehensive test suite for streaming handler
