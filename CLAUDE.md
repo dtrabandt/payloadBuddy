@@ -88,3 +88,133 @@ Tests are structured to handle both authenticated and non-authenticated scenario
 - Comprehensive coverage of all delay strategies, scenarios, and parameter combinations
 - OpenAPI specification testing ensures all endpoints are properly documented
 - Swagger UI functionality is validated through automated tests
+
+## Test-Driven Development (TDD) Workflow
+
+This project follows TDD practices and Claude Code is well-suited for TDD workflows:
+
+### TDD Cycle with Claude Code
+```bash
+# 1. RED: Write failing test first
+go test -v -run TestNewFeature     # Should fail - feature doesn't exist yet
+
+# 2. GREEN: Write minimal code to make test pass
+# Implement just enough to make the test pass
+
+# 3. REFACTOR: Improve code while keeping tests green
+go test -v                         # Ensure all tests still pass
+```
+
+### TDD Best Practices for This Project
+
+#### 1. **Test-First Development**
+- Always write tests before implementing new features
+- Start with the simplest failing test
+- Use table-driven tests for multiple scenarios
+- Example pattern:
+```go
+func TestNewDelayStrategy(t *testing.T) {
+    tests := []struct {
+        name     string
+        strategy string
+        expected DelayStrategy
+    }{
+        {"exponential strategy", "exponential", ExponentialDelay},
+        {"invalid strategy", "invalid", FixedDelay},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Test implementation here
+        })
+    }
+}
+```
+
+#### 2. **Fast Feedback Loop**
+- Run tests frequently: `go test -v`
+- Run specific tests: `go test -v -run TestSpecificFunction`
+- Use `go test -v ./...` for full project coverage
+- Tests should complete quickly (< 5 seconds for full suite)
+
+#### 3. **Comprehensive Test Coverage**
+- Test happy paths, edge cases, and error conditions
+- Include boundary value testing (e.g., count=0, count=1000000)
+- Test authentication scenarios (with/without auth)
+- Validate HTTP status codes, headers, and response formats
+- Test parameter validation and error handling
+
+#### 4. **Refactoring Safety**
+- Only refactor when all tests are green
+- Run tests after each refactoring step
+- Use tests as documentation of expected behavior
+- Maintain test coverage during refactoring
+
+### TDD Workflow Examples
+
+#### Adding a New Delay Strategy
+```bash
+# 1. RED: Write failing test
+# Add test for ExponentialDelay in streaming_payload_handler_test.go
+
+# 2. GREEN: Minimal implementation
+# Add ExponentialDelay constant and case in getDelayStrategy()
+
+# 3. REFACTOR: Improve implementation
+# Add proper exponential delay calculation in applyDelay()
+```
+
+#### Adding New Endpoint
+```bash
+# 1. RED: Write plugin test
+# Create test for new plugin implementing PayloadPlugin interface
+
+# 2. GREEN: Basic plugin implementation
+# Implement minimal Path(), Handler(), OpenAPISpec() methods
+
+# 3. REFACTOR: Complete implementation
+# Add full handler logic, parameter validation, OpenAPI documentation
+```
+
+### Testing Guidelines
+
+#### **Unit Tests**
+- Test individual functions in isolation
+- Mock external dependencies if needed
+- Focus on business logic and edge cases
+- Fast execution (no network calls, file I/O)
+
+#### **Integration Tests**
+- Test HTTP handlers end-to-end
+- Use `httptest.NewRecorder()` for HTTP testing
+- Test middleware integration (authentication)
+- Validate JSON response structures
+
+#### **OpenAPI Testing**
+- Validate OpenAPI specification structure
+- Test that all endpoints are documented
+- Verify parameter definitions match implementation
+- Check security scheme configuration
+
+### TDD Commands Reference
+```bash
+# Development cycle
+go test -v                           # Run all tests
+go test -v -run TestSpecific         # Run specific test pattern
+go test -v -short                    # Skip long-running tests
+go test -v -cover                    # Show test coverage
+
+# Continuous testing (with external tools)
+# Install: go install github.com/cosmtrek/air@latest
+air                                  # Auto-restart on file changes
+
+# Test with race detection
+go test -v -race                     # Detect race conditions
+```
+
+### TDD Benefits in This Project
+- **Rapid iteration**: Fast feedback on new features
+- **Regression prevention**: Catch breaking changes immediately  
+- **Documentation**: Tests serve as executable documentation
+- **Refactoring confidence**: Safe to improve code structure
+- **Quality assurance**: Edge cases and error conditions covered

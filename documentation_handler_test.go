@@ -412,7 +412,7 @@ func TestOpenAPIHandler_SecuritySchemeWhenAuthEnabled(t *testing.T) {
 			continue
 		}
 
-		if path.Get.Security == nil || len(path.Get.Security) == 0 {
+		if len(path.Get.Security) == 0 {
 			t.Errorf("Missing security requirements for %s", endpoint)
 			continue
 		}
@@ -447,7 +447,7 @@ func TestOpenAPIHandler_SecuritySchemeWhenAuthEnabled(t *testing.T) {
 
 		// Documentation endpoints should also show security in the spec for consistency
 		// even though they're excluded at the middleware level
-		if path.Get.Security == nil || len(path.Get.Security) == 0 {
+		if len(path.Get.Security) == 0 {
 			t.Errorf("Missing security requirements in spec for %s (should be consistent)", endpoint)
 		}
 	}
