@@ -218,3 +218,63 @@ go test -v -race                     # Detect race conditions
 - **Documentation**: Tests serve as executable documentation
 - **Refactoring confidence**: Safe to improve code structure
 - **Quality assurance**: Edge cases and error conditions covered
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+### Automated Testing (`.github/workflows/test.yml`)
+Triggers on:
+- Pull requests to `develop` or `main` branches
+- Pushes to `develop` branch
+
+**Test Pipeline includes:**
+- **Go Testing**: `go test -v -race ./...` with coverage reporting (minimum 80%)
+- **Code Quality**: `go vet`, `gofmt` formatting checks
+- **Linting**: `golangci-lint` for code quality and best practices
+- **Security**: `gosec` security scanner for vulnerabilities
+- **Build Verification**: Ensures code compiles successfully
+
+### Automated Releases (`.github/workflows/release.yml`)
+Triggers on:
+- Git tags matching `v*` pattern (e.g., `v1.0.0`, `v2.1.3`)
+
+**Release Pipeline:**
+1. **Quality Gate**: Runs full test suite before building
+2. **Cross-Platform Builds**: Creates binaries for:
+   - Linux (amd64, arm64)
+   - macOS (amd64, arm64) 
+   - Windows (amd64, arm64)
+3. **Release Artifacts**: 
+   - Compressed archives (`.tar.gz` for Unix, `.zip` for Windows)
+   - SHA256 checksums for integrity verification
+   - Automatic changelog generation from `CHANGELOG.md`
+4. **GitHub Release**: Creates release with all binaries attached
+
+### Git-flow Integration
+The CI/CD pipeline works seamlessly with git-flow:
+
+```bash
+# Feature development
+git flow feature start new-endpoint
+# ... development work
+git flow feature finish new-endpoint    # → triggers tests on PR to develop
+
+# Release process
+git flow release start v1.0.0
+# ... final preparations
+git flow release finish v1.0.0         # → merges to main, creates tag
+git push origin main develop --tags    # → triggers release build
+```
+
+### Branch Protection Setup
+Recommended GitHub branch protection rules:
+- **`main` branch**: Require PR reviews, require status checks, restrict pushes
+- **`develop` branch**: Require status checks for feature PRs
+- **Allow merge sources**: `release/*` and `hotfix/*` branches can merge to main
+
+### Version Management
+- Uses **Semantic Versioning** (e.g., `v1.2.3`)
+- Version embedded in binary via build flags: `-ldflags="-X main.version=v1.0.0"`
+- Pre-release versions supported (e.g., `v1.0.0-beta.1`)
+- Automatic changelog parsing from `CHANGELOG.md`

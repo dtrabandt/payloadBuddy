@@ -39,6 +39,13 @@ This server helps consultants and developers:
 - **Separation of Concerns**: Each handler in its own file with self-documenting capabilities
 - **Comprehensive Testing**: Unit tests for all scenarios, edge cases, and API documentation
 
+### 🚀 **CI/CD & Releases**
+- **Automated Testing**: GitHub Actions run tests on every PR and push to develop
+- **Cross-Platform Builds**: Automatic releases for Linux, macOS, and Windows (amd64 + arm64)
+- **Quality Gates**: Code coverage (80%+), linting, security scanning, and formatting checks
+- **Git-flow Integration**: Seamless workflow with feature branches, releases, and automated deployments
+- **Semantic Versioning**: Professional releases with changelogs and checksums
+
 ## Use Cases
 
 ### ServiceNow Integration Testing
@@ -57,9 +64,28 @@ Perfect for testing ServiceNow REST integrations that might fail with large data
 ## Getting Started
 
 ### Prerequisites
-- Go 1.24.5 or newer
+- Go 1.21 or newer (for building from source)
 
-### Installation
+### Installation Options
+
+#### Option 1: Download Pre-built Binaries (Recommended)
+Download the latest release for your platform from [GitHub Releases](https://github.com/dtrabandt/payloadBuddy/releases):
+
+- **Linux**: `payloadBuddy-vX.X.X-linux-amd64.tar.gz` or `payloadBuddy-vX.X.X-linux-arm64.tar.gz`
+- **macOS**: `payloadBuddy-vX.X.X-darwin-amd64.tar.gz` or `payloadBuddy-vX.X.X-darwin-arm64.tar.gz`
+- **Windows**: `payloadBuddy-vX.X.X-windows-amd64.zip` or `payloadBuddy-vX.X.X-windows-arm64.zip`
+
+Extract and run:
+```sh
+# Linux/macOS
+tar -xzf payloadBuddy-vX.X.X-linux-amd64.tar.gz
+./payloadBuddy
+
+# Windows
+# Extract the .zip file and run payloadBuddy.exe
+```
+
+#### Option 2: Build from Source
 1. Clone the repository:
    ```sh
    git clone https://github.com/dtrabandt/payloadBuddy.git
@@ -69,6 +95,11 @@ Perfect for testing ServiceNow REST integrations that might fail with large data
    ```sh
    go build -o payloadBuddy
    ```
+
+#### Option 3: Install with Go
+```sh
+go install github.com/dtrabandt/payloadBuddy@latest
+```
 
 ### Usage
 
@@ -337,14 +368,41 @@ All AI-generated code has been reviewed, tested, and validated by human develope
 
 ## Contributing
 
-Contributions are welcome! Areas for improvement:
-- Additional ServiceNow scenarios
-- More delay patterns
-- Performance optimizations
-- Additional output formats
-- Monitoring and metrics
+Contributions are welcome! This project follows git-flow and Test-Driven Development (TDD) practices.
 
-Please open issues or submit pull requests.
+### Development Workflow
+1. **Fork the repository** and create a feature branch from `develop`
+2. **Write tests first** (TDD approach) - see `CLAUDE.md` for TDD guidelines
+3. **Implement the feature** to make tests pass
+4. **Run the full test suite**: `go test -v ./...`
+5. **Submit a Pull Request** to the `develop` branch
+
+### Areas for Improvement
+- Additional ServiceNow scenarios and delay patterns
+- Performance optimizations and monitoring
+- Additional output formats (XML, CSV, etc.)
+- New authentication methods (JWT, OAuth)
+- Docker containerization and Kubernetes deployments
+
+### CI/CD Process
+- **Automated testing**: All PRs are automatically tested with comprehensive checks
+- **Quality gates**: Code coverage (80%+), linting, security scanning
+- **Cross-platform testing**: Builds verified on multiple platforms
+- **Automated releases**: Tagged releases trigger automatic binary builds
+
+Please open issues for bugs or feature requests, and submit pull requests for contributions.
+
+## Releases
+
+This project uses **Semantic Versioning** and automated releases:
+
+- **Development**: Work happens on the `develop` branch
+- **Releases**: Merges to `main` trigger automatic builds for all platforms
+- **Versioning**: Git tags (e.g., `v1.0.0`) create GitHub releases with binaries
+- **Platforms**: Linux, macOS, Windows (both amd64 and arm64 architectures)
+- **Artifacts**: Compressed binaries with SHA256 checksums for integrity verification
+
+See the [Releases page](https://github.com/dtrabandt/payloadBuddy/releases) for download links and changelogs.
 
 ## License
 

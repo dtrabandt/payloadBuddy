@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -231,4 +232,277 @@ func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200 with correct auth, got %d", resp.StatusCode)
 	}
+}
+
+func TestGetDurationParam(t *testing.T) {
+	tests := []struct {
+		name         string
+		paramValue   string
+		defaultValue time.Duration
+		expected     time.Duration
+	}{
+		{
+			name:         "empty parameter uses default",
+			paramValue:   "",
+			defaultValue: 100 * time.Millisecond,
+			expected:     100 * time.Millisecond,
+		},
+		{
+			name:         "valid duration string",
+			paramValue:   "250ms",
+			defaultValue: 100 * time.Millisecond,
+			expected:     250 * time.Millisecond,
+		},
+		{
+			name:         "valid duration seconds",
+			paramValue:   "2s",
+			defaultValue: 100 * time.Millisecond,
+			expected:     2 * time.Second,
+		},
+		{
+			name:         "milliseconds as integer",
+			paramValue:   "500",
+			defaultValue: 100 * time.Millisecond,
+			expected:     500 * time.Millisecond,
+		},
+		{
+			name:         "invalid format uses default",
+			paramValue:   "invalid",
+			defaultValue: 200 * time.Millisecond,
+			expected:     200 * time.Millisecond,
+		},
+		{
+			name:         "negative number as milliseconds",
+			paramValue:   "-100",
+			defaultValue: 50 * time.Millisecond,
+			expected:     -100 * time.Millisecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock request with the parameter
+			req := httptest.NewRequest("GET", "/?delay="+tt.paramValue, nil)
+			
+			result := getDurationParam(req, "delay", tt.defaultValue)
+			
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestGetIntParam(t *testing.T) {
+	tests := []struct {
+		name         string
+		paramValue   string
+		defaultValue int
+		expected     int
+	}{
+		{
+			name:         "empty parameter uses default",
+			paramValue:   "",
+			defaultValue: 1000,
+			expected:     1000,
+		},
+		{
+			name:         "valid integer",
+			paramValue:   "5000",
+			defaultValue: 1000,
+			expected:     5000,
+		},
+		{
+			name:         "zero value",
+			paramValue:   "0",
+			defaultValue: 1000,
+			expected:     0,
+		},
+		{
+			name:         "negative value",
+			paramValue:   "-100",
+			defaultValue: 1000,
+			expected:     -100,
+		},
+		{
+			name:         "invalid format uses default",
+			paramValue:   "invalid",
+			defaultValue: 2000,
+			expected:     2000,
+		},
+		{
+			name:         "float format uses default",
+			paramValue:   "123.45",
+			defaultValue: 500,
+			expected:     500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock request with the parameter
+			req := httptest.NewRequest("GET", "/?count="+tt.paramValue, nil)
+			
+			result := getIntParam(req, "count", tt.defaultValue)
+			
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestApplyDelay_EdgeCases(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		strategy  DelayStrategy
+		baseDelay time.Duration
+		scenario  string
+		itemIndex int
+		expectErr bool
+	}{
+		{
+			name:      "no delay strategy",
+			strategy:  NoDelay,
+			baseDelay: 100 * time.Millisecond,
+			scenario:  "",
+			itemIndex: 0,
+			expectErr: false,
+		},
+		{
+			name:      "zero base delay",
+			strategy:  FixedDelay,
+			baseDelay: 0,
+			scenario:  "",
+			itemIndex: 0,
+			expectErr: false,
+		},
+		{
+			name:      "maintenance spike trigger",
+			strategy:  FixedDelay,
+			baseDelay: 10 * time.Millisecond,
+			scenario:  "maintenance",
+			itemIndex: 500, // Should trigger spike
+			expectErr: false,
+		},
+		{
+			name:      "maintenance no spike",
+			strategy:  FixedDelay,
+			baseDelay: 10 * time.Millisecond,
+			scenario:  "maintenance",
+			itemIndex: 499, // Should not trigger spike
+			expectErr: false,
+		},
+		{
+			name:      "database load progression",
+			strategy:  FixedDelay,
+			baseDelay: 5 * time.Millisecond,
+			scenario:  "database_load",
+			itemIndex: 1000,
+			expectErr: false,
+		},
+		{
+			name:      "burst strategy spike",
+			strategy:  BurstDelay,
+			baseDelay: 10 * time.Millisecond,
+			scenario:  "",
+			itemIndex: 100, // Should trigger long pause
+			expectErr: false,
+		},
+		{
+			name:      "burst strategy normal",
+			strategy:  BurstDelay,
+			baseDelay: 10 * time.Millisecond,
+			scenario:  "",
+			itemIndex: 99, // Should not trigger long pause
+			expectErr: false,
+		},
+		{
+			name:      "progressive delay",
+			strategy:  ProgressiveDelay,
+			baseDelay: 5 * time.Millisecond,
+			scenario:  "",
+			itemIndex: 2000,
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			err := applyDelay(ctx, tt.strategy, tt.baseDelay, tt.scenario, tt.itemIndex)
+			elapsed := time.Since(start)
+			
+			if tt.expectErr && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			
+			// For NoDelay or zero baseDelay, should complete quickly
+			if tt.strategy == NoDelay || tt.baseDelay == 0 {
+				if elapsed > 10*time.Millisecond {
+					t.Errorf("Expected quick completion for no delay, took %v", elapsed)
+				}
+			}
+		})
+	}
+}
+
+func TestApplyDelay_ContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	// Cancel context immediately
+	cancel()
+	
+	err := applyDelay(ctx, FixedDelay, 100*time.Millisecond, "", 0)
+	
+	if err == nil {
+		t.Error("Expected context cancellation error")
+	}
+	if err != context.Canceled {
+		t.Errorf("Expected context.Canceled, got %v", err)
+	}
+}
+
+func TestApplyDelay_NetworkIssuesScenario(t *testing.T) {
+	// Test network_issues scenario multiple times to hit the random 10% chance
+	ctx := context.Background()
+	
+	hitLongDelay := false
+	hitShortDelay := false
+	
+	// Run many iterations to increase chance of hitting both paths
+	for i := 0; i < 100; i++ {
+		start := time.Now()
+		err := applyDelay(ctx, FixedDelay, 1*time.Millisecond, "network_issues", i)
+		elapsed := time.Since(start)
+		
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		
+		// Check if we hit a long delay (network spike) or short delay
+		if elapsed > 50*time.Millisecond {
+			hitLongDelay = true
+		} else {
+			hitShortDelay = true
+		}
+		
+		// If we've hit both, we can break early
+		if hitLongDelay && hitShortDelay {
+			break
+		}
+	}
+	
+	// We should have hit at least the short delay path
+	if !hitShortDelay {
+		t.Error("Expected to hit short delay path in network_issues scenario")
+	}
+	
+	// Note: We might not hit the long delay due to randomness, but that's okay
+	// The important thing is we're testing the code path
 }
