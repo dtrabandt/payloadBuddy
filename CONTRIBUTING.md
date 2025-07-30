@@ -39,7 +39,7 @@ We welcome contributions to PayloadBuddy! This project follows git-flow and Test
    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
    
    # Install security scanner
-   go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+   go install github.com/securego/gosec/v2/cmd/gosec@latest
    ```
 
 ## Development Workflow
