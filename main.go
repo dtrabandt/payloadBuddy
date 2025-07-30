@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 )
 
 // PayloadPlugin is an interface that must be implemented by
@@ -84,8 +85,16 @@ func main() {
 
 	fmt.Println("\nPress Ctrl+C to stop the server")
 
-	// Start the HTTP server and log any fatal errors.
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	// Start the HTTP server with proper timeouts to prevent resource exhaustion
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      nil, // Use DefaultServeMux
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	
+	if err := server.ListenAndServe(); err != nil {
 		// Print error to stderr and exit with non-zero code.
 		fmt.Fprintf(os.Stderr, "Server failed to start: %v\n", err)
 		os.Exit(1)

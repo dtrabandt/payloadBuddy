@@ -88,7 +88,7 @@ func generateSysID() string {
 	chars := "abcdef0123456789"
 	result := make([]byte, 32)
 	for i := range result {
-		result[i] = chars[mathRand.Intn(len(chars))]
+		result[i] = chars[mathRand.Intn(len(chars))] // #nosec G404 - Weak random OK for test data simulation
 	}
 	return string(result)
 }
@@ -108,8 +108,8 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 			delay = 500 * time.Millisecond
 		}
 	case "network_issues":
-		if mathRand.Float32() < 0.1 { // 10% chance of network spike
-			delay = time.Duration(mathRand.Intn(3000)) * time.Millisecond
+		if mathRand.Float32() < 0.1 { // 10% chance of network spike // #nosec G404 - Weak random OK for test simulation
+			delay = time.Duration(mathRand.Intn(3000)) * time.Millisecond // #nosec G404 - Weak random OK for test simulation
 		} else {
 			delay = baseDelay
 		}
@@ -124,7 +124,7 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 		case FixedDelay:
 			delay = baseDelay
 		case RandomDelay:
-			delay = time.Duration(mathRand.Int63n(int64(baseDelay * 2)))
+			delay = time.Duration(mathRand.Int63n(int64(baseDelay * 2))) // #nosec G404 - Weak random OK for test simulation
 		case ProgressiveDelay:
 			delay = baseDelay * time.Duration(itemIndex/1000+1)
 		case BurstDelay:
