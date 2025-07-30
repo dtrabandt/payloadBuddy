@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **OpenAPI 3.1.1 Integration**:
+  - Complete OpenAPI specification generation at `/openapi.json`
+  - Interactive Swagger UI at `/swagger` endpoint
+  - Automatic documentation collection from all registered plugins
+  - CORS-enabled OpenAPI endpoint for cross-origin access
+  - Self-documenting plugin architecture with `OpenAPISpec()` method
+  - Comprehensive parameter documentation with examples and constraints
+  - Authentication information included in specifications when enabled
+
+- **Documentation Enhancements**:
+  - Interactive API exploration through Swagger UI
+  - Programmatic API specification access for tools like Postman/Insomnia
+  - Detailed parameter descriptions with ServiceNow-specific examples
+  - Complete request/response schema definitions
+  - OpenAPI-compliant error response documentation
 - **Basic Authentication System**:
   - HTTP Basic Authentication middleware with CLI control
   - `-auth` flag to enable/disable authentication
@@ -37,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test for huge_payload count parameter
   - Authentication middleware tests (with/without credentials)
   - Security edge case testing
+  - OpenAPI specification validation tests
+  - Swagger UI functionality tests
+  - Plugin interface compliance testing
 
 - **Improved Documentation**:
   - Complete API reference with examples
@@ -55,19 +73,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved code organization and maintainability
 
 ### Changed
+- **PayloadPlugin Interface**: Extended to include OpenAPI specification generation
+  - All plugins now implement `OpenAPISpec()` method for automatic documentation
+  - Backward compatibility maintained with existing handler functionality
+  - Enhanced plugin registration to include documentation endpoints
+
 - **StreamingPayloadHandler**: Complete rewrite with advanced features
   - Added query parameter support (count, delay, strategy, scenario, batch_size, servicenow)
   - Improved JSON streaming with proper array formatting
   - Enhanced error handling and graceful shutdown
   - Better memory efficiency and performance
+  - Comprehensive OpenAPI specification with all parameters documented
 
 - **Main Application**: 
-  - Enhanced startup messages with all available endpoints
+  - Enhanced startup messages with all available endpoints (including new documentation endpoints)
   - Added random seed initialization
   - Improved endpoint registration logging  
   - Command-line flag parsing and validation
   - Authentication status display and credential output
   - Refactored authentication logic into separate module for better organization
+  - Automatic registration of documentation plugins alongside payload handlers
 
 - **Testing Framework**:
   - Expanded test coverage from basic functionality to comprehensive scenario testing
@@ -96,6 +121,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Maintainability**: Each handler in separate files for better organization
 - **Extensibility**: Easy to add new payload types via PayloadPlugin interface
 - **Testing**: Comprehensive test coverage for all components
+- **Documentation**: Self-documenting architecture with automatic OpenAPI generation
+- **Developer Experience**: Interactive API exploration and testing via Swagger UI
+- **Integration**: Standards-compliant OpenAPI 3.1.1 specification for tool compatibility
 
 ### ServiceNow Integration Focus
 - **Use Case Alignment**: Specifically designed for ServiceNow REST testing scenarios

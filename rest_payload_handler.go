@@ -46,3 +46,90 @@ func RestPayloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode payload", http.StatusInternalServerError)
 	}
 }
+
+// OpenAPISpec returns the OpenAPI specification for the rest payload endpoint
+func (h RestPayloadPlugin) OpenAPISpec() OpenAPIPathSpec {
+	return OpenAPIPathSpec{
+		Path: "/rest_payload",
+		Operation: OpenAPIPath{
+			Get: &OpenAPIOperation{
+				Summary:     "Get large JSON payload",
+				Description: "Returns a configurable number of JSON objects for testing REST client implementations",
+				Tags:        []string{"payload"},
+				Parameters: []OpenAPIParameter{
+					{
+						Name:        "count",
+						In:          "query",
+						Description: "Number of objects to return (default: 10000, max: 1000000)",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "integer",
+							Minimum: &[]int{1}[0],
+							Maximum: &[]int{1000000}[0],
+							Example: 10000,
+						},
+					},
+				},
+				Responses: map[string]OpenAPIResponse{
+					"200": {
+						Description: "Successful response with JSON array",
+						Content: map[string]OpenAPIMediaType{
+							"application/json": {
+								Schema: &OpenAPISchema{
+									Type: "array",
+									Items: &OpenAPISchema{
+										Type: "object",
+										Properties: map[string]*OpenAPISchema{
+											"id": {
+												Type:        "integer",
+												Description: "Unique identifier for the item",
+												Example:     1,
+											},
+											"name": {
+												Type:        "string",
+												Description: "Name of the item",
+												Example:     "Object 1",
+											},
+										},
+										Required: []string{"id", "name"},
+									},
+								},
+								Example: []Item{
+									{ID: 1, Name: "Object 1"},
+									{ID: 2, Name: "Object 2"},
+								},
+							},
+						},
+					},
+					"500": {
+						Description: "Internal server error",
+						Content: map[string]OpenAPIMediaType{
+							"text/plain": {
+								Schema: &OpenAPISchema{
+									Type:    "string",
+									Example: "Failed to encode payload",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Schemas: map[string]*OpenAPISchema{
+			"Item": {
+				Type: "object",
+				Properties: map[string]*OpenAPISchema{
+					"id": {
+						Type:        "integer",
+						Description: "Unique identifier for the item",
+					},
+					"name": {
+						Type:        "string",
+						Description: "Name of the item",
+					},
+				},
+				Required: []string{"id", "name"},
+			},
+		},
+	}
+}

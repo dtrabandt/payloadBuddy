@@ -258,3 +258,191 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("\n]"))
 	flusher.Flush()
 }
+
+// OpenAPISpec returns the OpenAPI specification for the streaming payload endpoint
+func (s StreamingPayloadPlugin) OpenAPISpec() OpenAPIPathSpec {
+	return OpenAPIPathSpec{
+		Path: "/stream_payload",
+		Operation: OpenAPIPath{
+			Get: &OpenAPIOperation{
+				Summary:     "Get streaming JSON payload",
+				Description: "Returns a real-time JSON stream with configurable delays and ServiceNow-specific scenarios",
+				Tags:        []string{"streaming"},
+				Parameters: []OpenAPIParameter{
+					{
+						Name:        "count",
+						In:          "query",
+						Description: "Number of objects to stream (default: 100, max: 100000)",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "integer",
+							Minimum: &[]int{1}[0],
+							Maximum: &[]int{100000}[0],
+							Example: 100,
+						},
+					},
+					{
+						Name:        "delay",
+						In:          "query",
+						Description: "Base delay between items (e.g., '100ms', '1s', or just milliseconds)",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "string",
+							Example: "100ms",
+						},
+					},
+					{
+						Name:        "strategy",
+						In:          "query",
+						Description: "Delay strategy: 'fixed' = consistent delay, 'random' = random delay up to 2x base, 'progressive' = increasing delay over time, 'burst' = short delays with periodic long pauses",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "string",
+							Enum:    []interface{}{"fixed", "random", "progressive", "burst"},
+							Example: "fixed",
+						},
+					},
+					{
+						Name:        "scenario",
+						In:          "query",
+						Description: "ServiceNow simulation scenario: 'peak_hours' = 200ms delays, 'maintenance' = 500ms with 2s spikes every 500 items, 'network_issues' = random spikes up to 3s (10% chance), 'database_load' = progressively increasing delays",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "string",
+							Enum:    []interface{}{"peak_hours", "maintenance", "network_issues", "database_load"},
+							Example: "peak_hours",
+						},
+					},
+					{
+						Name:        "batch_size",
+						In:          "query",
+						Description: "Number of items to send before flushing (default: 10)",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "integer",
+							Minimum: &[]int{1}[0],
+							Example: 10,
+						},
+					},
+					{
+						Name:        "servicenow",
+						In:          "query",
+						Description: "Enable ServiceNow-style record format",
+						Required:    false,
+						Schema: &OpenAPISchema{
+							Type:    "boolean",
+							Example: false,
+						},
+					},
+				},
+				Responses: map[string]OpenAPIResponse{
+					"200": {
+						Description: "Successful streaming response with JSON array",
+						Content: map[string]OpenAPIMediaType{
+							"application/json": {
+								Schema: &OpenAPISchema{
+									Type: "array",
+									Items: &OpenAPISchema{
+										Type: "object",
+										Properties: map[string]*OpenAPISchema{
+											"id": {
+												Type:        "integer",
+												Description: "Unique identifier for the item",
+												Example:     1,
+											},
+											"value": {
+												Type:        "string",
+												Description: "Value or description of the item",
+												Example:     "streamed data 1",
+											},
+											"timestamp": {
+												Type:        "string",
+												Format:      "date-time",
+												Description: "Timestamp when the item was generated",
+											},
+											"sys_id": {
+												Type:        "string",
+												Description: "ServiceNow system ID (when ServiceNow mode is enabled)",
+												Example:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+											},
+											"number": {
+												Type:        "string",
+												Description: "ServiceNow ticket number (when ServiceNow mode is enabled)",
+												Example:     "INC0000001",
+											},
+											"state": {
+												Type:        "string",
+												Description: "ServiceNow state (when ServiceNow mode is enabled)",
+												Example:     "New",
+											},
+										},
+										Required: []string{"id", "value", "timestamp"},
+									},
+								},
+								Example: []StreamItem{
+									{
+										ID:        1,
+										Value:     "streamed data 1",
+										Timestamp: time.Now(),
+									},
+									{
+										ID:        2,
+										Value:     "ServiceNow Record 2",
+										Timestamp: time.Now(),
+										SysID:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+										Number:    "INC0000002",
+										State:     "In Progress",
+									},
+								},
+							},
+						},
+					},
+					"500": {
+						Description: "Internal server error",
+						Content: map[string]OpenAPIMediaType{
+							"text/plain": {
+								Schema: &OpenAPISchema{
+									Type:    "string",
+									Example: "JSON encoding failed",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Schemas: map[string]*OpenAPISchema{
+			"StreamItem": {
+				Type: "object",
+				Properties: map[string]*OpenAPISchema{
+					"id": {
+						Type:        "integer",
+						Description: "Unique identifier for the item",
+					},
+					"value": {
+						Type:        "string",
+						Description: "Value or description of the item",
+					},
+					"timestamp": {
+						Type:        "string",
+						Format:      "date-time",
+						Description: "Timestamp when the item was generated",
+					},
+					"sys_id": {
+						Type:        "string",
+						Description: "ServiceNow system ID (optional)",
+					},
+					"number": {
+						Type:        "string",
+						Description: "ServiceNow ticket number (optional)",
+					},
+					"state": {
+						Type:        "string",
+						Description: "ServiceNow state (optional)",
+					},
+				},
+				Required: []string{"id", "value", "timestamp"},
+			},
+		},
+	}
+}
