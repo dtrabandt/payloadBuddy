@@ -1,5 +1,5 @@
 // Package auth provides HTTP Basic Authentication middleware and utilities
-// for the gohugePayloadServer application.
+// for the payloadBuddy application.
 //
 // This package implements secure HTTP Basic Authentication with the following features:
 // - Cryptographically secure random credential generation

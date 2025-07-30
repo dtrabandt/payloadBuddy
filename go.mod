@@ -1,4 +1,4 @@
-module github.com/dtrabandt/gohugePayloadServer
+module github.com/dtrabandt/payloadBuddy
 
 go 1.24.5
 

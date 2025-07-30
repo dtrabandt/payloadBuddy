@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Build and Run
 ```bash
-go build -o gohugePayloadServer        # Build the application
-./gohugePayloadServer                  # Run without authentication
-./gohugePayloadServer -auth            # Run with auto-generated credentials
-./gohugePayloadServer -auth -user=admin -pass=secret  # Run with custom credentials
+go build -o payloadBuddy        # Build the application
+./payloadBuddy                  # Run without authentication
+./payloadBuddy -auth            # Run with auto-generated credentials
+./payloadBuddy -auth -user=admin -pass=secret  # Run with custom credentials
 ```
 
 ### Testing

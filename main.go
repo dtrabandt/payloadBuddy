@@ -27,7 +27,7 @@ func registerPlugin(p PayloadPlugin) {
 	plugins = append(plugins, p)
 }
 
-// main is the entry point for the gohugePayloadServer application.
+// main is the entry point for the payloadBuddy application.
 // It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
@@ -49,7 +49,7 @@ func main() {
 	port := "8080"
 	addr := ":" + port
 
-	fmt.Printf("\nStarting gohugePayloadServer on http://localhost:%s\n", port)
+	fmt.Printf("\nStarting payloadBuddy on http://localhost:%s\n", port)
 	
 	// Print authentication info if enabled
 	printAuthenticationInfo()

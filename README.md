@@ -1,4 +1,4 @@
-# gohugePayloadServer
+# payloadBuddy
 
 A sophisticated Go server designed to test REST client implementations with large payloads and advanced streaming scenarios. This project is specifically tailored for ServiceNow consultants and developers who need to test and troubleshoot REST consumer behavior under various network and server conditions.
 
@@ -58,12 +58,12 @@ Perfect for testing ServiceNow REST integrations that might fail with large data
 ### Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/dtrabandt/gohugePayloadServer.git
-   cd gohugePayloadServer
+   git clone https://github.com/dtrabandt/payloadBuddy.git
+   cd payloadBuddy
    ```
 2. Build the server:
    ```sh
-   go build -o gohugePayloadServer
+   go build -o payloadBuddy
    ```
 
 ### Usage
@@ -71,17 +71,17 @@ Perfect for testing ServiceNow REST integrations that might fail with large data
 #### Basic Usage (No Authentication)
 Run the server:
 ```sh
-./gohugePayloadServer
+./payloadBuddy
 ```
 
 #### With Authentication
 Enable basic authentication:
 ```sh
 # Auto-generate username and password
-./gohugePayloadServer -auth
+./payloadBuddy -auth
 
 # Use specific credentials
-./gohugePayloadServer -auth -user=myuser -pass=mypass
+./payloadBuddy -auth -user=myuser -pass=mypass
 ```
 
 #### Command Line Options

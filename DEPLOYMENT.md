@@ -1,10 +1,10 @@
 # Deployment Guide
 
-This guide covers different deployment strategies for the gohugePayloadServer, specifically tailored for ServiceNow consultants and developers who need to test REST integrations in various environments.
+This guide covers different deployment strategies for the payloadBuddy, specifically tailored for ServiceNow consultants and developers who need to test REST integrations in various environments.
 
 ## Overview
 
-The gohugePayloadServer can be deployed in multiple ways depending on your testing scenario and security requirements:
+The payloadBuddy can be deployed in multiple ways depending on your testing scenario and security requirements:
 
 | Solution | Use Case | Complexity | Security | Best For |
 |----------|----------|------------|----------|----------|
@@ -39,12 +39,12 @@ ngrok authtoken YOUR_AUTH_TOKEN
 #### 2. Build and Start the Server
 ```bash
 # Clone and build the application
-git clone https://github.com/dtrabandt/gohugePayloadServer.git
-cd gohugePayloadServer
-go build -o gohugePayloadServer
+git clone https://github.com/dtrabandt/payloadBuddy.git
+cd payloadBuddy
+go build -o payloadBuddy
 
 # Start with authentication (recommended)
-./gohugePayloadServer -auth
+./payloadBuddy -auth
 ```
 
 #### 3. Expose via ngrok
@@ -82,7 +82,7 @@ version: "2"
 authtoken: YOUR_AUTH_TOKEN
 
 tunnels:
-  gohugePayloadServer:
+  payloadBuddy:
     addr: 8080
     proto: http
     bind_tls: true
@@ -96,7 +96,7 @@ version: "2"
 authtoken: YOUR_AUTH_TOKEN
 
 tunnels:
-  gohugePayloadServer-secure:
+  payloadBuddy-secure:
     addr: 8080
     proto: http
     bind_tls: true
@@ -112,7 +112,7 @@ tunnels:
 #### Start with Configuration
 ```bash
 # Start specific tunnel
-ngrok start gohugePayloadServer
+ngrok start payloadBuddy
 
 # Start all tunnels
 ngrok start --all
@@ -178,24 +178,24 @@ while (gr.next()) {
 ### Architecture Overview
 ```
                     ServiceNow Cloud
-    ┌─────────────────────────────────────┐
-    │         ┌─────────────────┐         │
-    │         │   ServiceNow    │         │
-    │         │   Instance/PDI  │         │
-    │         └─────────────────┘         │
-    └─────────────────┬───────────────────┘
-                      ▲ HTTPS (Outbound only)
-                      │ MID-Server connects TO instance
-                      │
-    ┌──────────────────────────────────────────────────┐
-    │           Docker Network                         │
-    │                                                  │
-    │  ┌──────────────────┐    ┌─────────────────────┐ │
-    │  │   MID-Server     │◄──►│ gohugePayloadServer │ │
-    │  │   Container      │    │    Container        │ │
-    │  └──────────────────┘    └─────────────────────┘ │
-    │                                                  │
-    └──────────────────────────────────────────────────┘
+          ┌─────────────────────────────────────┐
+          │         ┌─────────────────┐         │
+          │         │   ServiceNow    │         │
+          │         │   Instance/PDI  │         │
+          │         └─────────────────┘         │
+          └─────────────────┬───────────────────┘
+                            ▲ HTTPS (Outbound only)
+                            │ MID-Server connects TO instance
+                            │
+    ┌───────────────────────────────────────────────┐
+    │                 Docker Network                │
+    │                                               │
+    │  ┌──────────────────┐    ┌──────────────────┐ │
+    │  │   MID-Server     │◄──►│   payloadBuddy   | │
+    │  │   Container      │    │    Container     │ │
+    │  └──────────────────┘    └──────────────────┘ │
+    │                                               │
+    └───────────────────────────────────────────────┘
               Local Network/Docker Host
 ```
 
@@ -229,18 +229,18 @@ FROM golang:1.24.5-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go mod tidy
-RUN go build -o gohugePayloadServer
+RUN go build -o payloadBuddy
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
-COPY --from=builder /app/gohugePayloadServer .
+COPY --from=builder /app/payloadBuddy .
 
 EXPOSE 8080
 
 # Default to authenticated mode in container
-CMD ["./gohugePayloadServer", "-auth"]
+CMD ["./payloadBuddy", "-auth"]
 ```
 
 #### 3. Create MID-Server Dockerfile
@@ -285,7 +285,7 @@ services:
     build: 
       context: .
       dockerfile: payloadserver/Dockerfile
-    container_name: gohugePayloadServer
+    container_name: payloadBuddy
     ports:
       - "8080:8080"
     environment:
@@ -630,7 +630,7 @@ docker-compose exec midserver curl http://payloadserver:8080/huge_payload?count=
 docker stats --no-stream
 
 # Check container limits
-docker inspect gohugePayloadServer | grep -i memory
+docker inspect payloadBuddy | grep -i memory
 
 # Scale horizontally
 docker-compose up -d --scale payloadserver=3
@@ -696,7 +696,7 @@ services:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gohugePayloadServer
+  name: payloadBuddy
 spec:
   replicas: 3
   selector:
@@ -709,7 +709,7 @@ spec:
     spec:
       containers:
       - name: payloadserver
-        image: gohugePayloadServer:latest
+        image: payloadBuddy:latest
         ports:
         - containerPort: 8080
         env:
