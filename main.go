@@ -93,7 +93,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
-	
+
 	if err := server.ListenAndServe(); err != nil {
 		// Print error to stderr and exit with non-zero code.
 		fmt.Fprintf(os.Stderr, "Server failed to start: %v\n", err)

@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	mathRand "math/rand"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -31,6 +32,33 @@ const (
 	ProgressiveDelay
 	BurstDelay
 )
+
+// secureRandFloat32 generates a cryptographically secure random float32 between 0 and 1
+func secureRandFloat32() (float32, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1<<24))
+	if err != nil {
+		return 0, err
+	}
+	return float32(n.Int64()) / float32(1<<24), nil
+}
+
+// secureRandIntn generates a cryptographically secure random int between 0 and n
+func secureRandIntn(n int) (int, error) {
+	bigN, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	if err != nil {
+		return 0, err
+	}
+	return int(bigN.Int64()), nil
+}
+
+// secureRandInt63n generates a cryptographically secure random int64 between 0 and n
+func secureRandInt63n(n int64) (int64, error) {
+	bigN, err := rand.Int(rand.Reader, big.NewInt(n))
+	if err != nil {
+		return 0, err
+	}
+	return bigN.Int64(), nil
+}
 
 // Helper function to parse duration parameters
 func getDurationParam(r *http.Request, param string, defaultValue time.Duration) time.Duration {
@@ -88,7 +116,13 @@ func generateSysID() string {
 	chars := "abcdef0123456789"
 	result := make([]byte, 32)
 	for i := range result {
-		result[i] = chars[mathRand.Intn(len(chars))] // #nosec G404 - Weak random OK for test data simulation
+		randIdx, err := secureRandIntn(len(chars))
+		if err != nil {
+			// Fallback to deterministic pattern if crypto/rand fails
+			result[i] = chars[i%len(chars)]
+		} else {
+			result[i] = chars[randIdx]
+		}
 	}
 	return string(result)
 }
@@ -108,8 +142,16 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 			delay = 500 * time.Millisecond
 		}
 	case "network_issues":
-		if mathRand.Float32() < 0.1 { // 10% chance of network spike // #nosec G404 - Weak random OK for test simulation
-			delay = time.Duration(mathRand.Intn(3000)) * time.Millisecond // #nosec G404 - Weak random OK for test simulation
+		randFloat, err := secureRandFloat32()
+		if err != nil {
+			delay = baseDelay
+		} else if randFloat < 0.1 { // 10% chance of network spike
+			randInt, err := secureRandIntn(3000)
+			if err != nil {
+				delay = baseDelay
+			} else {
+				delay = time.Duration(randInt) * time.Millisecond
+			}
 		} else {
 			delay = baseDelay
 		}
@@ -124,7 +166,12 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 		case FixedDelay:
 			delay = baseDelay
 		case RandomDelay:
-			delay = time.Duration(mathRand.Int63n(int64(baseDelay * 2))) // #nosec G404 - Weak random OK for test simulation
+			randInt64, err := secureRandInt63n(int64(baseDelay * 2))
+			if err != nil {
+				delay = baseDelay // Fallback to fixed delay if crypto/rand fails
+			} else {
+				delay = time.Duration(randInt64)
+			}
 		case ProgressiveDelay:
 			delay = baseDelay * time.Duration(itemIndex/1000+1)
 		case BurstDelay:
