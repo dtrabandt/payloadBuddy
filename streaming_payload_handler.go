@@ -193,7 +193,9 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Start JSON array
-	w.Write([]byte("[\n"))
+	if _, err := w.Write([]byte("[\n")); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	// Stream items
@@ -202,7 +204,7 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			// Client disconnected, clean exit
-			w.Write([]byte("\n]"))
+			_, _ = w.Write([]byte("\n]"))
 			return
 		default:
 		}
@@ -235,16 +237,20 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Write separator for items after the first
 		if i > 0 {
-			w.Write([]byte(",\n"))
+			if _, err := w.Write([]byte(",\n")); err != nil {
+				return
+			}
 		}
 
 		// Write item
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			return
+		}
 
 		// Apply delay
 		if err := applyDelay(ctx, strategy, baseDelay, scenario, i); err != nil {
 			// Context cancelled during delay
-			w.Write([]byte("\n]"))
+			_, _ = w.Write([]byte("\n]"))
 			return
 		}
 
@@ -255,7 +261,7 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Close JSON array
-	w.Write([]byte("\n]"))
+	_, _ = w.Write([]byte("\n]"))
 	flusher.Flush()
 }
 

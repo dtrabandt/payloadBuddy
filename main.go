@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	mathRand "math/rand"
 	"net/http"
 	"os"
-	"time"
 )
 
 // PayloadPlugin is an interface that must be implemented by
@@ -36,7 +34,8 @@ func main() {
 	flag.Parse()
 
 	// Initialize random seed for delay variations in streaming
-	mathRand.Seed(time.Now().UnixNano())
+	// Note: As of Go 1.20, calling Seed is no longer necessary as the
+	// default source is automatically seeded with a random value
 
 	// Setup authentication if enabled
 	setupAuthentication()

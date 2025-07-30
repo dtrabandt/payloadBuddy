@@ -216,7 +216,7 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // Register documentation plugins in init function
