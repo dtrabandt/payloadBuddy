@@ -15,9 +15,10 @@
 // - No password hashing (Basic Auth sends credentials in base64, not suitable for production)
 //
 // Usage:
-//   go run . -auth                          // Enable with auto-generated credentials
-//   go run . -auth -user=myuser -pass=mypass // Enable with custom credentials
-//   go run .                                // Disable authentication (default)
+//
+//	go run . -auth                          // Enable with auto-generated credentials
+//	go run . -auth -user=myuser -pass=mypass // Enable with custom credentials
+//	go run .                                // Disable authentication (default)
 package main
 
 import (
@@ -41,26 +42,26 @@ var (
 	// Default: false (authentication disabled)
 	// Flag: -auth
 	enableAuth = flag.Bool("auth", false, "Enable basic authentication")
-	
+
 	// username is a command-line flag for specifying a custom username.
 	// If empty when authentication is enabled, a secure random username is generated.
 	//
 	// Default: "" (auto-generate)
 	// Flag: -user=<username>
 	username = flag.String("user", "", "Username for basic auth (auto-generated if empty)")
-	
+
 	// password is a command-line flag for specifying a custom password.
 	// If empty when authentication is enabled, a secure random password is generated.
 	//
 	// Default: "" (auto-generate)
 	// Flag: -pass=<password>
 	password = flag.String("pass", "", "Password for basic auth (auto-generated if empty)")
-	
+
 	// authUsername holds the actual username used for authentication.
 	// This is either the value from the -user flag or an auto-generated secure string.
 	// Only populated when authentication is enabled.
 	authUsername string
-	
+
 	// authPassword holds the actual password used for authentication.
 	// This is either the value from the -pass flag or an auto-generated secure string.
 	// Only populated when authentication is enabled.
@@ -84,26 +85,30 @@ var (
 // Entropy: log2(62^length) bits (e.g., 8 chars = ~47.6 bits, 12 chars = ~71.5 bits)
 //
 // Parameters:
-//   length - The desired length of the generated string (must be > 0)
+//
+//	length - The desired length of the generated string (must be > 0)
 //
 // Returns:
-//   A random string of the specified length containing only alphanumeric characters
+//
+//	A random string of the specified length containing only alphanumeric characters
 //
 // Panics:
-//   If crypto/rand.Read() fails (extremely rare, indicates system-level issues)
+//
+//	If crypto/rand.Read() fails (extremely rare, indicates system-level issues)
 //
 // Example:
-//   username := generateRandomString(8)   // e.g., "Kj9mN2pQ"
-//   password := generateRandomString(12)  // e.g., "7hG3kL9mP4xR"
+//
+//	username := generateRandomString(8)   // e.g., "Kj9mN2pQ"
+//	password := generateRandomString(12)  // e.g., "7hG3kL9mP4xR"
 func generateRandomString(length int) string {
 	// Character set: 26 lowercase + 26 uppercase + 10 digits = 62 total characters
 	// This provides good entropy while avoiding special characters that might
 	// cause issues in URLs or command-line usage
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	
+
 	// Allocate byte slice for random data
 	b := make([]byte, length)
-	
+
 	// Generate cryptographically secure random bytes
 	// crypto/rand.Read() is the gold standard for secure random generation in Go
 	if _, err := rand.Read(b); err != nil {
@@ -111,13 +116,13 @@ func generateRandomString(length int) string {
 		// (e.g., /dev/urandom is unavailable on Unix systems)
 		panic(fmt.Sprintf("Failed to generate secure random bytes: %v", err))
 	}
-	
+
 	// Map each random byte to a character in our charset
 	// We use modulo to ensure uniform distribution across the character set
 	for i := range b {
 		b[i] = charset[b[i]%byte(len(charset))]
 	}
-	
+
 	return string(b)
 }
 
@@ -131,41 +136,46 @@ func generateRandomString(length int) string {
 //
 // Security Implementation Details:
 //
-// 1. Timing Attack Prevention:
-//    Uses crypto/subtle.ConstantTimeCompare to prevent attackers from determining
-//    valid usernames or passwords by measuring response times. Standard string
-//    comparison (==) would exit early on the first differing character, creating
-//    a timing side-channel that could be exploited.
+//  1. Timing Attack Prevention:
+//     Uses crypto/subtle.ConstantTimeCompare to prevent attackers from determining
+//     valid usernames or passwords by measuring response times. Standard string
+//     comparison (==) would exit early on the first differing character, creating
+//     a timing side-channel that could be exploited.
 //
 // 2. Authentication Flow:
-//    - If authentication is disabled, requests pass through immediately
-//    - Extracts credentials from Authorization: Basic <base64> header
-//    - Validates both username and password using constant-time comparison
-//    - Returns 401 Unauthorized with WWW-Authenticate header if validation fails
+//   - If authentication is disabled, requests pass through immediately
+//   - Extracts credentials from Authorization: Basic <base64> header
+//   - Validates both username and password using constant-time comparison
+//   - Returns 401 Unauthorized with WWW-Authenticate header if validation fails
 //
 // 3. Security Considerations:
-//    - HTTP Basic Auth transmits credentials in base64 (not encrypted)
-//    - Should only be used over HTTPS in production environments
-//    - Credentials are compared against in-memory values (no persistent storage)
-//    - No rate limiting or account lockout (suitable for development/testing only)
+//   - HTTP Basic Auth transmits credentials in base64 (not encrypted)
+//   - Should only be used over HTTPS in production environments
+//   - Credentials are compared against in-memory values (no persistent storage)
+//   - No rate limiting or account lockout (suitable for development/testing only)
 //
 // Parameters:
-//   next - The next HTTP handler in the middleware chain
+//
+//	next - The next HTTP handler in the middleware chain
 //
 // Returns:
-//   An http.HandlerFunc that performs authentication before calling the next handler
+//
+//	An http.HandlerFunc that performs authentication before calling the next handler
 //
 // HTTP Status Codes:
-//   200 - Authentication successful, request passed to next handler
-//   401 - Authentication failed or credentials missing
+//
+//	200 - Authentication successful, request passed to next handler
+//	401 - Authentication failed or credentials missing
 //
 // Example Usage:
-//   http.HandleFunc("/protected", basicAuthMiddleware(myHandler))
+//
+//	http.HandleFunc("/protected", basicAuthMiddleware(myHandler))
 //
 // Example Requests:
-//   curl -u username:password http://localhost:8080/endpoint  # Valid request
-//   curl http://localhost:8080/endpoint                       # Returns 401
-//   curl -H "Authorization: Basic $(echo -n user:pass | base64)" http://localhost:8080/endpoint
+//
+//	curl -u username:password http://localhost:8080/endpoint  # Valid request
+//	curl http://localhost:8080/endpoint                       # Returns 401
+//	curl -H "Authorization: Basic $(echo -n user:pass | base64)" http://localhost:8080/endpoint
 //
 // Security Warnings:
 //   - This implementation is suitable for development and testing only
@@ -190,7 +200,7 @@ func basicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			// - No Authorization header at all
 			// - Authorization header with wrong scheme (e.g., Bearer instead of Basic)
 			// - Malformed base64 encoding in the Basic Auth header
-			
+
 			// Set WWW-Authenticate header to inform client about required auth method
 			// The "realm" parameter is a human-readable string describing the protected area
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -201,7 +211,7 @@ func basicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Validate credentials using constant-time comparison
 		// This is critical for security - we must check both username and password
 		// even if the username is wrong, to prevent timing attacks
-		
+
 		// subtle.ConstantTimeCompare returns 1 if the slices are equal, 0 otherwise
 		// It always examines every byte in both slices, regardless of whether
 		// differences are found early, making timing attacks infeasible
@@ -251,21 +261,23 @@ func basicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 //   - No validation is performed on custom credentials (user responsibility)
 //
 // Flag Dependencies:
-//   This function depends on the following command-line flags being parsed:
-//   - enableAuth (*bool): Whether authentication is enabled
-//   - username (*string): Custom username (empty string triggers auto-generation)
-//   - password (*string): Custom password (empty string triggers auto-generation)
+//
+//	This function depends on the following command-line flags being parsed:
+//	- enableAuth (*bool): Whether authentication is enabled
+//	- username (*string): Custom username (empty string triggers auto-generation)
+//	- password (*string): Custom password (empty string triggers auto-generation)
 //
 // Side Effects:
 //   - Modifies global variables authUsername and authPassword
 //   - These variables are used by basicAuthMiddleware for credential validation
 //
 // Example Scenarios:
-//   ./server -auth                          → Auto-generate both username and password
-//   ./server -auth -user=admin              → Use "admin" as username, auto-generate password
-//   ./server -auth -pass=secret123          → Auto-generate username, use "secret123" as password
-//   ./server -auth -user=admin -pass=secret → Use both custom credentials
-//   ./server                                → Authentication disabled, function does nothing
+//
+//	./server -auth                          → Auto-generate both username and password
+//	./server -auth -user=admin              → Use "admin" as username, auto-generate password
+//	./server -auth -pass=secret123          → Auto-generate username, use "secret123" as password
+//	./server -auth -user=admin -pass=secret → Use both custom credentials
+//	./server                                → Authentication disabled, function does nothing
 //
 // Note: This function should be called exactly once during application startup,
 // after flag.Parse() but before starting the HTTP server.
@@ -283,7 +295,7 @@ func setupAuthentication() {
 			// No validation is performed - user is responsible for choosing appropriate values
 			authUsername = *username
 		}
-		
+
 		// Configure password: use custom value if provided, otherwise generate secure random
 		if *password == "" {
 			// Generate a 12-character random password
@@ -325,47 +337,51 @@ func setupAuthentication() {
 //   - Typically called during server startup to inform operators of the credentials
 //
 // Output Format:
-//   The function outputs a clearly formatted block containing:
-//   - Visual separators for easy identification
-//   - Username: plaintext value for -u curl parameter
-//   - Password: plaintext value for -u curl parameter  
-//   - Auth Header: base64-encoded "username:password" for direct header usage
+//
+//	The function outputs a clearly formatted block containing:
+//	- Visual separators for easy identification
+//	- Username: plaintext value for -u curl parameter
+//	- Password: plaintext value for -u curl parameter
+//	- Auth Header: base64-encoded "username:password" for direct header usage
 //
 // Example Output:
-//   === BASIC AUTHENTICATION ENABLED ===
-//   Username: Kj9mN2pQ
-//   Password: 7hG3kL9mP4xR
-//   Auth Header: Authorization: Basic S2o5bU4ycFE6N2hHM2tMOW1QNHhS
-//   =====================================
+//
+//	=== BASIC AUTHENTICATION ENABLED ===
+//	Username: Kj9mN2pQ
+//	Password: 7hG3kL9mP4xR
+//	Auth Header: Authorization: Basic S2o5bU4ycFE6N2hHM2tMOW1QNHhS
+//	=====================================
 //
 // Usage Examples:
-//   The displayed information can be used with various HTTP clients:
-//   - curl: curl -u Kj9mN2pQ:7hG3kL9mP4xR http://localhost:8080/endpoint
-//   - HTTPie: http GET localhost:8080/endpoint -a Kj9mN2pQ:7hG3kL9mP4xR
-//   - Manual header: curl -H "Authorization: Basic S2o5bU4ycFE6N2hHM2tMOW1QNHhS" http://localhost:8080/endpoint
+//
+//	The displayed information can be used with various HTTP clients:
+//	- curl: curl -u Kj9mN2pQ:7hG3kL9mP4xR http://localhost:8080/endpoint
+//	- HTTPie: http GET localhost:8080/endpoint -a Kj9mN2pQ:7hG3kL9mP4xR
+//	- Manual header: curl -H "Authorization: Basic S2o5bU4ycFE6N2hHM2tMOW1QNHhS" http://localhost:8080/endpoint
 //
 // Security Warning:
-//   This function intentionally displays sensitive authentication credentials.
-//   Only use in environments where this is acceptable (development, testing, demos).
+//
+//	This function intentionally displays sensitive authentication credentials.
+//	Only use in environments where this is acceptable (development, testing, demos).
 func printAuthenticationInfo() {
 	// Only display authentication info if it's actually enabled
 	if *enableAuth {
 		// Print a clear header to make authentication status obvious
 		fmt.Println("\n=== BASIC AUTHENTICATION ENABLED ===")
-		
+
 		// Display the username in plaintext for easy copying to curl -u commands
 		fmt.Printf("Username: %s\n", authUsername)
-		
+
 		// Display the password in plaintext for easy copying to curl -u commands
 		fmt.Printf("Password: %s\n", authPassword)
-		
+
 		// Pre-encode the credentials as a complete Authorization header value
 		// This saves users from having to manually base64 encode "username:password"
 		// The format follows RFC 7617: Authorization: Basic <base64(username:password)>
 		credentials := authUsername + ":" + authPassword
 		encodedCredentials := base64.StdEncoding.EncodeToString([]byte(credentials))
 		fmt.Printf("Auth Header: Authorization: Basic %s\n", encodedCredentials)
-		
+
 		// Print a clear footer to mark the end of authentication information
 		fmt.Println("=====================================")
 	}
@@ -384,29 +400,32 @@ func printAuthenticationInfo() {
 //   - If authentication is enabled: returns a complete curl command with embedded credentials
 //
 // Parameters:
-//   baseURL - The complete URL to be accessed (e.g., "http://localhost:8080/huge_payload")
-//            Should include protocol, host, port, path, and any query parameters
+//
+//	baseURL - The complete URL to be accessed (e.g., "http://localhost:8080/huge_payload")
+//	         Should include protocol, host, port, path, and any query parameters
 //
 // Returns:
-//   A string containing either:
-//   - The original URL (when authentication is disabled)
-//   - A curl command with authentication (when authentication is enabled)
+//
+//	A string containing either:
+//	- The original URL (when authentication is disabled)
+//	- A curl command with authentication (when authentication is enabled)
 //
 // Output Examples:
 //
-//   Authentication Disabled:
-//     Input:  "http://localhost:8080/huge_payload"
-//     Output: "http://localhost:8080/huge_payload"
+//	Authentication Disabled:
+//	  Input:  "http://localhost:8080/huge_payload"
+//	  Output: "http://localhost:8080/huge_payload"
 //
-//   Authentication Enabled:
-//     Input:  "http://localhost:8080/huge_payload?count=1000"
-//     Output: "curl -u Kj9mN2pQ:7hG3kL9mP4xR http://localhost:8080/huge_payload?count=1000"
+//	Authentication Enabled:
+//	  Input:  "http://localhost:8080/huge_payload?count=1000"
+//	  Output: "curl -u Kj9mN2pQ:7hG3kL9mP4xR http://localhost:8080/huge_payload?count=1000"
 //
 // Usage Patterns:
-//   This function is typically used when generating help text or startup messages:
 //
-//   fmt.Printf("Test endpoint: %s\n", getExampleURL("http://localhost:8080/test"))
-//   fmt.Printf("API docs: %s\n", getExampleURL("http://localhost:8080/docs"))
+//	This function is typically used when generating help text or startup messages:
+//
+//	fmt.Printf("Test endpoint: %s\n", getExampleURL("http://localhost:8080/test"))
+//	fmt.Printf("API docs: %s\n", getExampleURL("http://localhost:8080/docs"))
 //
 // Security Considerations:
 //   - When authentication is enabled, credentials are embedded in the returned string
@@ -415,10 +434,11 @@ func printAuthenticationInfo() {
 //   - The curl format makes it easy for users to modify for their HTTP client of choice
 //
 // Alternative HTTP Clients:
-//   While this function returns curl examples, users can adapt them for other tools:
-//   - HTTPie: http GET localhost:8080/endpoint -a username:password
-//   - wget: wget --user=username --password=password http://localhost:8080/endpoint
-//   - Browser: Use browser developer tools to set Authorization header
+//
+//	While this function returns curl examples, users can adapt them for other tools:
+//	- HTTPie: http GET localhost:8080/endpoint -a username:password
+//	- wget: wget --user=username --password=password http://localhost:8080/endpoint
+//	- Browser: Use browser developer tools to set Authorization header
 //
 // Design Rationale:
 //   - curl is widely available and familiar to developers
@@ -432,7 +452,7 @@ func getExampleURL(baseURL string) string {
 		// Format: curl -u username:password <URL>
 		return fmt.Sprintf("curl -u %s:%s %s", authUsername, authPassword, baseURL)
 	}
-	
+
 	// Return the bare URL when authentication is disabled
 	// This can be used directly in browsers, wget, or other HTTP clients
 	return baseURL

@@ -9,13 +9,13 @@ import (
 type DocumentationPlugin struct{}
 
 // Path returns the HTTP path for the OpenAPI JSON endpoint
-func (d DocumentationPlugin) Path() string { 
-	return "/openapi.json" 
+func (d DocumentationPlugin) Path() string {
+	return "/openapi.json"
 }
 
 // Handler returns the handler function for the OpenAPI JSON endpoint
-func (d DocumentationPlugin) Handler() http.HandlerFunc { 
-	return OpenAPIHandler 
+func (d DocumentationPlugin) Handler() http.HandlerFunc {
+	return OpenAPIHandler
 }
 
 // OpenAPISpec returns the OpenAPI specification for the documentation endpoint itself
@@ -49,13 +49,13 @@ func (d DocumentationPlugin) OpenAPISpec() OpenAPIPathSpec {
 type SwaggerUIPlugin struct{}
 
 // Path returns the HTTP path for the Swagger UI endpoint
-func (s SwaggerUIPlugin) Path() string { 
-	return "/swagger" 
+func (s SwaggerUIPlugin) Path() string {
+	return "/swagger"
 }
 
 // Handler returns the handler function for the Swagger UI endpoint
-func (s SwaggerUIPlugin) Handler() http.HandlerFunc { 
-	return SwaggerUIHandler 
+func (s SwaggerUIPlugin) Handler() http.HandlerFunc {
+	return SwaggerUIHandler
 }
 
 // OpenAPISpec returns the OpenAPI specification for the Swagger UI endpoint
@@ -104,7 +104,7 @@ func OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
 				Description: "Development server",
 			},
 		},
-		Paths:      make(map[string]OpenAPIPath),
+		Paths: make(map[string]OpenAPIPath),
 		Components: &OpenAPIComponents{
 			Schemas: make(map[string]*OpenAPISchema),
 		},
@@ -113,10 +113,10 @@ func OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
 	// Collect specifications from all plugins
 	for _, plugin := range plugins {
 		pathSpec := plugin.OpenAPISpec()
-		
+
 		// Add the path operation
 		spec.Paths[pathSpec.Path] = pathSpec.Operation
-		
+
 		// Merge schemas
 		if pathSpec.Schemas != nil {
 			for name, schema := range pathSpec.Schemas {
@@ -133,7 +133,7 @@ func OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
 		if spec.Components.SecuritySchemes == nil {
 			spec.Components.SecuritySchemes = make(map[string]*OpenAPISecurityScheme)
 		}
-		
+
 		// Add Basic Auth security scheme
 		spec.Components.SecuritySchemes["BasicAuth"] = &OpenAPISecurityScheme{
 			Type:   "http",
@@ -170,7 +170,7 @@ func OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
 // SwaggerUIHandler serves the Swagger UI HTML interface
 func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	
+
 	html := `<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+For human contributors, see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+
 ## Development Commands
 
 ### Build and Run
@@ -22,6 +24,7 @@ go test -v ./...                       # Run tests recursively (single package p
 ### Development Workflow
 ```bash
 go mod tidy                            # Clean up dependencies
+gofmt -s -w .                          # Format code (REQUIRED - CI will fail without this)
 go build && go test -v                 # Build and test in sequence
 ```
 
@@ -199,6 +202,7 @@ func TestNewDelayStrategy(t *testing.T) {
 ### TDD Commands Reference
 ```bash
 # Development cycle
+gofmt -s -w .                        # Format code (MUST run before committing)
 go test -v                           # Run all tests
 go test -v -run TestSpecific         # Run specific test pattern
 go test -v -short                    # Skip long-running tests
@@ -210,6 +214,9 @@ air                                  # Auto-restart on file changes
 
 # Test with race detection
 go test -v -race                     # Detect race conditions
+
+# Pre-commit checklist
+gofmt -s -w . && go test -v -cover ./... && go build
 ```
 
 ### TDD Benefits in This Project
@@ -218,6 +225,41 @@ go test -v -race                     # Detect race conditions
 - **Documentation**: Tests serve as executable documentation
 - **Refactoring confidence**: Safe to improve code structure
 - **Quality assurance**: Edge cases and error conditions covered
+
+## Code Formatting Requirements
+
+**CRITICAL**: All Go code MUST be formatted with `gofmt` before committing.
+
+### Formatting Command
+```bash
+gofmt -s -w .
+```
+
+### Why This Matters
+- **CI Pipeline**: GitHub Actions will FAIL if code is not properly formatted
+- **Code Review**: Unformatted code creates unnecessary diffs and confusion
+- **Go Standards**: Follows official Go community conventions
+- **Team Consistency**: Ensures uniform code style across all contributors
+
+### Common Formatting Issues
+- **Spacing**: Incorrect indentation and spacing around operators
+- **Imports**: Import grouping and ordering
+- **Struct alignment**: Field alignment in struct definitions
+- **Comments**: Comment formatting and placement
+
+### IDE Integration
+- **VSCode**: Install Go extension and enable "format on save"
+- **GoLand**: Formatting is built-in and automatic
+- **Vim/Neovim**: Use vim-go plugin with auto-formatting
+
+### Pre-commit Workflow
+Always run this sequence before committing:
+```bash
+gofmt -s -w .                          # Format all Go files
+go test -v -cover ./...                # Run tests with coverage
+go build                              # Verify build works
+git add . && git commit -m "message"  # Commit changes
+```
 
 ## CI/CD Pipeline
 

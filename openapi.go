@@ -4,11 +4,11 @@ package main
 
 // OpenAPISpec represents the complete OpenAPI 3.1.1 specification
 type OpenAPISpec struct {
-	OpenAPI    string                    `json:"openapi"`
-	Info       OpenAPIInfo               `json:"info"`
-	Servers    []OpenAPIServer           `json:"servers,omitempty"`
-	Paths      map[string]OpenAPIPath    `json:"paths"`
-	Components *OpenAPIComponents        `json:"components,omitempty"`
+	OpenAPI    string                 `json:"openapi"`
+	Info       OpenAPIInfo            `json:"info"`
+	Servers    []OpenAPIServer        `json:"servers,omitempty"`
+	Paths      map[string]OpenAPIPath `json:"paths"`
+	Components *OpenAPIComponents     `json:"components,omitempty"`
 }
 
 // OpenAPIInfo contains API metadata
@@ -34,28 +34,28 @@ type OpenAPIPath struct {
 
 // OpenAPIOperation represents a single API operation
 type OpenAPIOperation struct {
-	Summary     string                            `json:"summary,omitempty"`
-	Description string                            `json:"description,omitempty"`
-	Parameters  []OpenAPIParameter                `json:"parameters,omitempty"`
-	Responses   map[string]OpenAPIResponse        `json:"responses"`
-	Tags        []string                          `json:"tags,omitempty"`
-	Security    []map[string][]string             `json:"security,omitempty"`
+	Summary     string                     `json:"summary,omitempty"`
+	Description string                     `json:"description,omitempty"`
+	Parameters  []OpenAPIParameter         `json:"parameters,omitempty"`
+	Responses   map[string]OpenAPIResponse `json:"responses"`
+	Tags        []string                   `json:"tags,omitempty"`
+	Security    []map[string][]string      `json:"security,omitempty"`
 }
 
 // OpenAPIParameter represents a parameter in the API
 type OpenAPIParameter struct {
-	Name        string           `json:"name"`
-	In          string           `json:"in"` // "query", "header", "path", "cookie"
-	Description string           `json:"description,omitempty"`
-	Required    bool             `json:"required,omitempty"`
-	Schema      *OpenAPISchema   `json:"schema,omitempty"`
-	Example     interface{}      `json:"example,omitempty"`
+	Name        string         `json:"name"`
+	In          string         `json:"in"` // "query", "header", "path", "cookie"
+	Description string         `json:"description,omitempty"`
+	Required    bool           `json:"required,omitempty"`
+	Schema      *OpenAPISchema `json:"schema,omitempty"`
+	Example     interface{}    `json:"example,omitempty"`
 }
 
 // OpenAPIResponse represents a response from an API operation
 type OpenAPIResponse struct {
-	Description string                           `json:"description"`
-	Content     map[string]OpenAPIMediaType      `json:"content,omitempty"`
+	Description string                      `json:"description"`
+	Content     map[string]OpenAPIMediaType `json:"content,omitempty"`
 }
 
 // OpenAPIMediaType represents a media type (e.g., application/json)
@@ -92,7 +92,7 @@ type OpenAPIComponents struct {
 
 // OpenAPIPathSpec represents the specification contribution from a single plugin
 type OpenAPIPathSpec struct {
-	Path      string         `json:"path"`
-	Operation OpenAPIPath    `json:"operation"`
+	Path      string                    `json:"path"`
+	Operation OpenAPIPath               `json:"operation"`
 	Schemas   map[string]*OpenAPISchema `json:"schemas,omitempty"`
 }

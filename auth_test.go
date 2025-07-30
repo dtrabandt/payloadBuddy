@@ -19,12 +19,12 @@ func TestGenerateRandomString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := generateRandomString(tt.length)
-			
+
 			// Check length
 			if len(result) != tt.length {
 				t.Errorf("Expected length %d, got %d", tt.length, len(result))
 			}
-			
+
 			// Check character set (alphanumeric only)
 			const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 			for _, char := range result {
@@ -32,7 +32,7 @@ func TestGenerateRandomString(t *testing.T) {
 					t.Errorf("Invalid character '%c' in generated string", char)
 				}
 			}
-			
+
 			// Check uniqueness (run multiple times)
 			// Note: For very short strings (1 char), duplicates are likely due to limited charset
 			if tt.length > 1 {
@@ -54,7 +54,7 @@ func TestGenerateRandomString_Uniqueness(t *testing.T) {
 	length := 16
 	iterations := 100
 	results := make(map[string]bool)
-	
+
 	for i := 0; i < iterations; i++ {
 		result := generateRandomString(length)
 		if results[result] {
@@ -71,7 +71,7 @@ func TestSetupAuthentication(t *testing.T) {
 	originalPassword := *password
 	originalAuthUsername := authUsername
 	originalAuthPassword := authPassword
-	
+
 	defer func() {
 		// Restore original values
 		*enableAuth = originalEnableAuth
@@ -139,10 +139,10 @@ func TestSetupAuthentication(t *testing.T) {
 			*password = tt.inputPassword
 			authUsername = ""
 			authPassword = ""
-			
+
 			// Call function
 			setupAuthentication()
-			
+
 			// Check results
 			if tt.expectUsername {
 				if authUsername == "" {
@@ -159,7 +159,7 @@ func TestSetupAuthentication(t *testing.T) {
 					t.Errorf("Expected authUsername to be empty, got %q", authUsername)
 				}
 			}
-			
+
 			if tt.expectPassword {
 				if authPassword == "" {
 					t.Error("Expected authPassword to be set, but it's empty")
@@ -184,7 +184,7 @@ func TestPrintAuthenticationInfo(t *testing.T) {
 	originalEnableAuth := *enableAuth
 	originalAuthUsername := authUsername
 	originalAuthPassword := authPassword
-	
+
 	defer func() {
 		// Restore original values
 		*enableAuth = originalEnableAuth
@@ -220,11 +220,11 @@ func TestPrintAuthenticationInfo(t *testing.T) {
 			*enableAuth = tt.enableAuth
 			authUsername = tt.username
 			authPassword = tt.password
-			
+
 			// This function prints to stdout, so we can't easily capture output
 			// But we can call it to ensure it doesn't panic
 			printAuthenticationInfo()
-			
+
 			// The function should complete without error
 			// In a more sophisticated test, we could capture stdout
 		})
@@ -236,7 +236,7 @@ func TestGetExampleURL(t *testing.T) {
 	originalEnableAuth := *enableAuth
 	originalAuthUsername := authUsername
 	originalAuthPassword := authPassword
-	
+
 	defer func() {
 		// Restore original values
 		*enableAuth = originalEnableAuth
@@ -283,9 +283,9 @@ func TestGetExampleURL(t *testing.T) {
 			*enableAuth = tt.enableAuth
 			authUsername = tt.username
 			authPassword = tt.password
-			
+
 			result := getExampleURL(tt.baseURL)
-			
+
 			if result != tt.expected {
 				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}

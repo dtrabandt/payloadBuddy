@@ -96,10 +96,10 @@ func TestPluginRegistration_InitFunctions(t *testing.T) {
 	// the expected plugins are registered
 
 	expectedPlugins := map[string]bool{
-		"/rest_payload":  false,
+		"/rest_payload":   false,
 		"/stream_payload": false,
-		"/openapi.json":  false,
-		"/swagger":       false,
+		"/openapi.json":   false,
+		"/swagger":        false,
 	}
 
 	// Check that all expected plugins are registered

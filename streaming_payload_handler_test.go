@@ -199,36 +199,36 @@ func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
 	*enableAuth = true
 	authUsername = "streamuser"
 	authPassword = "streampass"
-	
+
 	// Test without credentials
 	req := httptest.NewRequest("GET", "/stream_payload", nil)
 	w := httptest.NewRecorder()
-	
+
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
 	resp := w.Result()
-	
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 without auth, got %d", resp.StatusCode)
 	}
-	
+
 	// Test with wrong credentials
 	req = createStreamAuthRequest("GET", "/stream_payload", "wrong", "credentials")
 	w = httptest.NewRecorder()
-	
+
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
 	resp = w.Result()
-	
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 with wrong auth, got %d", resp.StatusCode)
 	}
-	
+
 	// Test with correct credentials
 	req = createStreamAuthRequest("GET", "/stream_payload", "streamuser", "streampass")
 	w = httptest.NewRecorder()
-	
+
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
 	resp = w.Result()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200 with correct auth, got %d", resp.StatusCode)
 	}
@@ -283,9 +283,9 @@ func TestGetDurationParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a mock request with the parameter
 			req := httptest.NewRequest("GET", "/?delay="+tt.paramValue, nil)
-			
+
 			result := getDurationParam(req, "delay", tt.defaultValue)
-			
+
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
@@ -342,9 +342,9 @@ func TestGetIntParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a mock request with the parameter
 			req := httptest.NewRequest("GET", "/?count="+tt.paramValue, nil)
-			
+
 			result := getIntParam(req, "count", tt.defaultValue)
-			
+
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
@@ -434,14 +434,14 @@ func TestApplyDelay_EdgeCases(t *testing.T) {
 			start := time.Now()
 			err := applyDelay(ctx, tt.strategy, tt.baseDelay, tt.scenario, tt.itemIndex)
 			elapsed := time.Since(start)
-			
+
 			if tt.expectErr && err == nil {
 				t.Error("Expected error but got none")
 			}
 			if !tt.expectErr && err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
-			
+
 			// For NoDelay or zero baseDelay, should complete quickly
 			if tt.strategy == NoDelay || tt.baseDelay == 0 {
 				if elapsed > 10*time.Millisecond {
@@ -454,12 +454,12 @@ func TestApplyDelay_EdgeCases(t *testing.T) {
 
 func TestApplyDelay_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Cancel context immediately
 	cancel()
-	
+
 	err := applyDelay(ctx, FixedDelay, 100*time.Millisecond, "", 0)
-	
+
 	if err == nil {
 		t.Error("Expected context cancellation error")
 	}
@@ -471,38 +471,38 @@ func TestApplyDelay_ContextCancellation(t *testing.T) {
 func TestApplyDelay_NetworkIssuesScenario(t *testing.T) {
 	// Test network_issues scenario multiple times to hit the random 10% chance
 	ctx := context.Background()
-	
+
 	hitLongDelay := false
 	hitShortDelay := false
-	
+
 	// Run many iterations to increase chance of hitting both paths
 	for i := 0; i < 100; i++ {
 		start := time.Now()
 		err := applyDelay(ctx, FixedDelay, 1*time.Millisecond, "network_issues", i)
 		elapsed := time.Since(start)
-		
+
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		
+
 		// Check if we hit a long delay (network spike) or short delay
 		if elapsed > 50*time.Millisecond {
 			hitLongDelay = true
 		} else {
 			hitShortDelay = true
 		}
-		
+
 		// If we've hit both, we can break early
 		if hitLongDelay && hitShortDelay {
 			break
 		}
 	}
-	
+
 	// We should have hit at least the short delay path
 	if !hitShortDelay {
 		t.Error("Expected to hit short delay path in network_issues scenario")
 	}
-	
+
 	// Note: We might not hit the long delay due to randomness, but that's okay
 	// The important thing is we're testing the code path
 }

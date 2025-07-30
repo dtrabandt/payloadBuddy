@@ -271,68 +271,30 @@ Interactive Swagger UI for exploring and testing the API.
 
 ## Testing
 
-Run the test suite:
 ```sh
-go test -v
+go test -v ./...                  # Run all tests
+go test -v -cover ./...           # Run with coverage report
 ```
 
-Tests cover:
-- Basic functionality
-- Parameter validation
-- ServiceNow mode
-- All delay strategies
-- All scenarios
-- Error conditions
-- Performance expectations
-- Authentication middleware
-- Security edge cases
+The test suite covers all endpoints, authentication scenarios, delay strategies, ServiceNow simulations, and edge cases. See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
 
 ## Development
 
-### Adding New Plugins
-1. Implement the `PayloadPlugin` interface:
-   ```go
-   type MyPlugin struct{}
-   
-   func (m MyPlugin) Path() string { return "/my_endpoint" }
-   func (m MyPlugin) Handler() http.HandlerFunc { return MyHandler }
-   func (m MyPlugin) OpenAPISpec() OpenAPIPathSpec {
-       return OpenAPIPathSpec{
-           Path: "/my_endpoint",
-           Operation: OpenAPIPath{
-               Get: &OpenAPIOperation{
-                   Summary: "My custom endpoint",
-                   Description: "Description of what this endpoint does",
-                   // ... complete OpenAPI specification
-               },
-           },
-       }
-   }
-   ```
+PayloadBuddy uses an extensible plugin architecture. New endpoints can be added by implementing the `PayloadPlugin` interface and automatically appear in the OpenAPI specification and Swagger UI.
 
-2. Register in `init()`:
-   ```go
-   func init() {
-       registerPlugin(MyPlugin{})
-   }
-   ```
-
-3. Your endpoint will automatically appear in `/openapi.json` and `/swagger`
+For detailed development guidelines, plugin creation, and contribution workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Project Structure
 ```
 ├── main.go                          # Server setup and plugin registration
-├── auth.go                          # HTTP Basic Authentication middleware and utilities
-├── openapi.go                       # OpenAPI 3.1.1 data structures and types
-├── rest_payload_handler.go          # Large single-response endpoint
-├── streaming_payload_handler.go     # Advanced streaming endpoint
-├── documentation_handler.go         # OpenAPI specification and Swagger UI endpoints
+├── *_payload_handler.go             # Endpoint implementations
+├── auth.go                          # Authentication middleware
+├── documentation_handler.go         # OpenAPI spec and Swagger UI
 ├── *_test.go                        # Comprehensive test suite
-├── README.md                        # This file
-├── CLAUDE.md                        # Development guidance for Claude Code instances
-├── DEPLOYMENT.md                    # Deployment guide (ngrok, Docker, MID-Server)
-├── CHANGELOG.md                     # Version history
-└── go.mod                           # Go module definition
+├── .github/workflows/               # CI/CD automation
+├── README.md                        # User documentation
+├── CONTRIBUTING.md                  # Development guidelines
+└── DEPLOYMENT.md                    # Deployment strategies
 ```
 
 ## Best Practices for Large Payloads
@@ -368,29 +330,15 @@ All AI-generated code has been reviewed, tested, and validated by human develope
 
 ## Contributing
 
-Contributions are welcome! This project follows git-flow and Test-Driven Development (TDD) practices.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
 
-### Development Workflow
-1. **Fork the repository** and create a feature branch from `develop`
-2. **Write tests first** (TDD approach) - see `CLAUDE.md` for TDD guidelines
-3. **Implement the feature** to make tests pass
-4. **Run the full test suite**: `go test -v ./...`
-5. **Submit a Pull Request** to the `develop` branch
+- Development workflow and git-flow practices
+- Code quality standards and formatting requirements
+- Testing guidelines and TDD approach
+- CI/CD pipeline and quality gates
+- Project structure and plugin architecture
 
-### Areas for Improvement
-- Additional ServiceNow scenarios and delay patterns
-- Performance optimizations and monitoring
-- Additional output formats (XML, CSV, etc.)
-- New authentication methods (JWT, OAuth)
-- Docker containerization and Kubernetes deployments
-
-### CI/CD Process
-- **Automated testing**: All PRs are automatically tested with comprehensive checks
-- **Quality gates**: Code coverage (80%+), linting, security scanning
-- **Cross-platform testing**: Builds verified on multiple platforms
-- **Automated releases**: Tagged releases trigger automatic binary builds
-
-Please open issues for bugs or feature requests, and submit pull requests for contributions.
+For bugs and feature requests, please open an issue on [GitHub](https://github.com/dtrabandt/payloadBuddy/issues).
 
 ## Releases
 

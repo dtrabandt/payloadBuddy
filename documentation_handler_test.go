@@ -279,7 +279,7 @@ func TestDocumentationEndpoints_NoAuthRequired(t *testing.T) {
 	*enableAuth = true
 	authUsername = "testuser"
 	authPassword = "testpass"
-	defer func() { 
+	defer func() {
 		*enableAuth = false
 		authUsername = ""
 		authPassword = ""
