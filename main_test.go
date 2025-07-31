@@ -167,3 +167,39 @@ func isValidHTTPPath(path string) bool {
 	// Additional path validation could be added here
 	return true
 }
+
+// This test verifies the setting of the default port. It's 8080,
+// however, the user can override it with the -port attribute.
+func TestSetupPort(t *testing.T) {
+	expectedPort := "8080"
+
+	// No port specified, should return default
+	if port := setupPort(""); port != expectedPort {
+		t.Errorf("Expected port %s, got %s", expectedPort, port)
+	}
+
+	// Port specified, should return that port
+	if port := setupPort("9090"); port != "9090" {
+		t.Errorf("Expected port 9090, got %s", port)
+	}
+
+	// Invalid port specified, should return default
+	if port := setupPort("invalid_port"); port != expectedPort {
+		t.Errorf("Expected default port %s for invalid input, got %s", expectedPort, port)
+	}
+
+	// Port out of range, should return default
+	if port := setupPort("70000"); port != expectedPort {
+		t.Errorf("Expected default port %s for out of range input, got %s", expectedPort, port)
+	}
+
+	// Port is zero, should return default
+	if port := setupPort("0"); port != expectedPort {
+		t.Errorf("Expected default port %s for zero input, got %s", expectedPort, port)
+	}
+
+	// Port is negative, should return default
+	if port := setupPort("-1"); port != expectedPort {
+		t.Errorf("Expected default port %s for negative input, got %s", expectedPort, port)
+	}
+}

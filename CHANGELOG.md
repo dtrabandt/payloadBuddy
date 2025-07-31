@@ -13,7 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-## [0.1.0] - 2025-07-31
+## [v0.2.0] - 2025-07-31
+
+### Added
+
+- **README**:
+  - Added some lines about `flags` functionality to display a usage menu upon utilizing `-h` or `--help`
+
+- **Port Selection Feature**:
+  - Added `-port` command-line parameter to allow users to specify the HTTP server port (default: 8080)
+
+### Changed
+
+- Removed old leftover comments from Go 1.20.0 behaviour. Removed it as the code was not existing anymore.
+
+### Fixed
+
+## [v0.1.0] - 2025-07-31
 
 ### Added
 - **OpenAPI 3.1.1 Integration**:

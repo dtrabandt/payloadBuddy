@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -30,16 +31,36 @@ func registerPlugin(p PayloadPlugin) {
 	plugins = append(plugins, p)
 }
 
+// Setup the variables from the command line flags.
+var (
+	paramPort = flag.String("port", "8080", "Port to run the HTTP server on")
+)
+
+// Setup the port for the HTTP server.
+// If the provided port is empty or not possible to parse,
+// it defaults to 8080. It also defaults to 8080 if the port is out of range.
+func setupPort(desiredPort string) string {
+	defaultPort := "8080"
+
+	i, err := strconv.Atoi(desiredPort)
+	if err != nil || i <= 0 || i > 65535 {
+		return defaultPort // Return default port if parsing fails or invalid port
+	} else {
+		// Ensure the port is within valid range
+		if i < 1 || i > 65535 {
+			return defaultPort // Return default port if out of range
+		} else {
+			return desiredPort // Return the valid port specified by the user
+		}
+	}
+}
+
 // main is the entry point for the payloadBuddy application.
 // It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
 	// Parse command line flags
 	flag.Parse()
-
-	// Initialize random seed for delay variations in streaming
-	// Note: As of Go 1.20, calling Seed is no longer necessary as the
-	// default source is automatically seeded with a random value
 
 	// Setup authentication if enabled
 	setupAuthentication()
@@ -57,7 +78,7 @@ func main() {
 		}
 	}
 
-	port := "8080"
+	port := setupPort(*paramPort)
 	addr := ":" + port
 
 	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
