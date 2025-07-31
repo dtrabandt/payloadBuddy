@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.1.0] - 2025-07-31
+
+### Added
 - **OpenAPI 3.1.1 Integration**:
   - Complete OpenAPI specification generation at `/openapi.json`
   - Interactive Swagger UI at `/swagger` endpoint
@@ -115,37 +123,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Streaming Performance**: Added proper flushing for real-time streaming
 - **Error Handling**: Improved error responses and client disconnect handling
 
-## [Previous Releases]
-
-### Added (Previous)
-- Refactorings to add a unique number to the name and to correct the id's
-- Rename of the function to HugePayloadHandler to support more functionality in the future
-- Added plugin architecture for payload handlers (PayloadPlugin interface)
-- Added /stream_payload endpoint for streaming large JSON arrays
-- Refactored StreamingPayloadHandler into its own file
-- Improved documentation in README.md and handler files
-- Added tests for streaming payload handler
-- Initial commit with basic huge payload functionality
-
-### Technical Improvements
-- **Architecture**: Clean separation of concerns with plugin system
-- **Maintainability**: Each handler in separate files for better organization
-- **Extensibility**: Easy to add new payload types via PayloadPlugin interface
-- **Testing**: Comprehensive test coverage for all components
-- **Documentation**: Self-documenting architecture with automatic OpenAPI generation
-- **Developer Experience**: Interactive API exploration and testing via Swagger UI
-- **Integration**: Standards-compliant OpenAPI 3.1.1 specification for tool compatibility
-
-### ServiceNow Integration Focus
-- **Use Case Alignment**: Specifically designed for ServiceNow REST testing scenarios
-- **Realistic Simulations**: Authentic ServiceNow record formats and performance patterns
-- **Consultant Tools**: Ready-to-use examples and scenarios for field testing
-- **Production Readiness**: Robust error handling and performance optimization
-
----
-
 ### Notes for Contributors
 - All new features should include comprehensive tests
 - ServiceNow-specific scenarios should be documented with real-world use cases
 - Performance changes should be validated with benchmarks
 - Breaking changes require major version bump
+
+[Unreleased]: https://github.com/dennistrabandt/payloadBuddy/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dennistrabandt/payloadBuddy/releases/tag/v0.1.0
