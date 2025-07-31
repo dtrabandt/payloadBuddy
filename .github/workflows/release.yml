@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test Before Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        check-latest: true
+
+    - name: Run tests
+      run: go test -v -race ./...
+
+    - name: Run build test
+      run: go build -v ./...
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        check-latest: true
+
+    - name: Get version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          # Extract changelog for this version
+          awk "/^## \[${{ steps.version.outputs.version }}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "## Changes" > release_notes.md
+            echo "See the full changelog in CHANGELOG.md" >> release_notes.md
+          fi
+        else
+          echo "## ${{ steps.version.outputs.version }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### Changes" >> release_notes.md
+          echo "- Release ${{ steps.version.outputs.version }}" >> release_notes.md
+        fi
+        
+        echo "Generated release notes:"
+        cat release_notes.md
+
+    - name: Build binaries
+      run: |
+        mkdir -p dist
+        
+        # Define platforms and architectures
+        platforms=(
+          "linux/amd64"
+          "linux/arm64"
+          "darwin/amd64"
+          "darwin/arm64"
+          "windows/amd64"
+          "windows/arm64"
+        )
+        
+        for platform in "${platforms[@]}"; do
+          IFS='/' read -r GOOS GOARCH <<< "$platform"
+          
+          # Set binary name
+          binary_name="payloadBuddy"
+          if [ "$GOOS" = "windows" ]; then
+            binary_name="${binary_name}.exe"
+          fi
+          
+          # Build
+          echo "Building for $GOOS/$GOARCH..."
+          GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o "dist/${binary_name}" .
+          
+          # Create archive
+          archive_name="payloadBuddy-${{ steps.version.outputs.version }}-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            cd dist && zip -r "${archive_name}.zip" "${binary_name}" && cd ..
+            rm "dist/${binary_name}"
+          else
+            cd dist && tar -czf "${archive_name}.tar.gz" "${binary_name}" && cd ..
+            rm "dist/${binary_name}"
+          fi
+          
+          echo "Created ${archive_name}"
+        done
+        
+        # List all created files
+        echo "Built files:"
+        ls -la dist/
+
+    - name: Create checksums
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+        echo "Checksums:"
+        cat checksums.txt
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+        files: |
+          dist/*
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update release with download stats
+      run: |
+        echo "✅ Release ${{ steps.version.outputs.version }} created successfully!"
+        echo ""
+        echo "📦 Built binaries for:"
+        echo "  - Linux (amd64, arm64)"
+        echo "  - macOS (amd64, arm64)"  
+        echo "  - Windows (amd64, arm64)"
+        echo ""
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
