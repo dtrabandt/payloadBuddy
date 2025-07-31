@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.2.0] - 2025-07-31
+
+### Added
+
 - **README**:
   - Added some lines about `flags` functionality to display a usage menu upon utilizing `-h` or `--help`
 
