@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Port Selection Feature**:
+  - Added `-port` command-line parameter to allow users to specify the HTTP server port (default: 8080)
+
 ### Changed
 
 ### Fixed
 
-## [0.1.0] - 2025-07-31
+## [v0.1.0] - 2025-07-31
 
 ### Added
 - **OpenAPI 3.1.1 Integration**:

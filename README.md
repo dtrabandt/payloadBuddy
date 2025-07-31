@@ -122,11 +122,12 @@ Enable basic authentication:
 **Note**: When authentication is enabled, API endpoints (`/rest_payload`, `/stream_payload`) require credentials, but documentation endpoints (`/swagger`, `/openapi.json`) remain publicly accessible for better developer experience.
 
 #### Command Line Options
+- `-port=<port>`: Set the HTTP server port (default: 8080)
 - `-auth`: Enable basic authentication (default: false)
 - `-user=<username>`: Set username (auto-generated if not specified)
 - `-pass=<password>`: Set password (auto-generated if not specified)
 
-The server listens on port 8080 and provides detailed startup information with example URLs and authentication details.
+The server listens on the specified port (default: 8080) and provides detailed startup information with example URLs and authentication details.
 
 ## Deployment Options
 

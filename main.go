@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -28,6 +29,30 @@ var plugins []PayloadPlugin
 // of each plugin implementation.
 func registerPlugin(p PayloadPlugin) {
 	plugins = append(plugins, p)
+}
+
+// Setup the variables from the command line flags.
+var (
+	paramPort = flag.String("port", "8080", "Port to run the HTTP server on")
+)
+
+// Setup the port for the HTTP server.
+// If the provided port is empty or not possible to parse,
+// it defaults to 8080. It also defaults to 8080 if the port is out of range.
+func setupPort(desiredPort string) string {
+	defaultPort := "8080"
+
+	i, err := strconv.Atoi(desiredPort)
+	if err != nil || i <= 0 || i > 65535 {
+		return defaultPort // Return default port if parsing fails or invalid port
+	} else {
+		// Ensure the port is within valid range
+		if i < 1 || i > 65535 {
+			return defaultPort // Return default port if out of range
+		} else {
+			return desiredPort // Return the valid port specified by the user
+		}
+	}
 }
 
 // main is the entry point for the payloadBuddy application.
@@ -57,7 +82,7 @@ func main() {
 		}
 	}
 
-	port := "8080"
+	port := setupPort(*paramPort)
 	addr := ":" + port
 
 	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
