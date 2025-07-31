@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// Release 0.1.0
+var Version = "0.1.0"
+
 // PayloadPlugin is an interface that must be implemented by
 // any plugin that wants to register a payload handler.
 // It provides the Path, Handler, and OpenAPISpec methods for the HTTP endpoint.
@@ -57,7 +60,7 @@ func main() {
 	port := "8080"
 	addr := ":" + port
 
-	fmt.Printf("\nStarting payloadBuddy on http://localhost:%s\n", port)
+	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
 
 	// Print authentication info if enabled
 	printAuthenticationInfo()
