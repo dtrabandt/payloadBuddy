@@ -62,10 +62,6 @@ func main() {
 	// Parse command line flags
 	flag.Parse()
 
-	// Initialize random seed for delay variations in streaming
-	// Note: As of Go 1.20, calling Seed is no longer necessary as the
-	// default source is automatically seeded with a random value
-
 	// Setup authentication if enabled
 	setupAuthentication()
 

@@ -122,6 +122,14 @@ Enable basic authentication:
 **Note**: When authentication is enabled, API endpoints (`/rest_payload`, `/stream_payload`) require credentials, but documentation endpoints (`/swagger`, `/openapi.json`) remain publicly accessible for better developer experience.
 
 #### Command Line Options
+For a complete list of available options, use the built-in help:
+```sh
+./payloadBuddy -h
+# or
+./payloadBuddy --help
+```
+
+**Available options:**
 - `-port=<port>`: Set the HTTP server port (default: 8080)
 - `-auth`: Enable basic authentication (default: false)
 - `-user=<username>`: Set username (auto-generated if not specified)
