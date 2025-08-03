@@ -1,10 +1,10 @@
 ---
-layout: home
+layout: default
 title: Home
 ---
 
 <div align="center">
-  <img src="../logo/logo.svg" alt="PayloadBuddy Logo" width="200"/>
+  <img src="assets/images/logo.svg" alt="PayloadBuddy Logo" width="200"/>
 </div>
 
 # PayloadBuddy
