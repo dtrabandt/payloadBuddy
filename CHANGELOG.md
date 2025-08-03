@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.2.4] - 2025-08-03
+
+### Added
+
+### Changed
+
+- As there are limitations including files for the jekyll build process, I added a new build step to copy the needed information to /docs
+- The same thing has now happended to the logos - they are now in /docs/assets/images/
+- Change the theme to minimal instead of minima
+
+### Fixed
+
 ## [v0.2.3] - 2025-08-03
 
 ### Added

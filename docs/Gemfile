@@ -3,8 +3,8 @@ source "https://rubygems.org"
 # Jekyll
 gem "jekyll", "~> 4.3.0"
 
-# Default theme
-gem "minima", "~> 2.5"
+# Minimal theme
+gem "jekyll-theme-minimal"
 
 # Jekyll plugins
 group :jekyll_plugins do
