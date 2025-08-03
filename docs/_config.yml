@@ -76,9 +76,9 @@ defaults:
       path: ""
       type: "pages"
     values:
-      layout: "page"
+      layout: "default"
   - scope:
       path: ""
       type: "docs"
     values:
-      layout: "page"
+      layout: "default"
