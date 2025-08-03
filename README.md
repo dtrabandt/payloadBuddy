@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="logo/logo.svg" alt="PayloadBuddy Logo" width="200"/>
+</div>
+
 # payloadBuddy
 
 A sophisticated Go server designed to test REST client implementations with large payloads and advanced streaming scenarios. This project is specifically tailored for ServiceNow consultants and developers who need to test and troubleshoot REST consumer behavior under various network and server conditions.
@@ -364,6 +368,13 @@ See the [Releases page](https://github.com/dtrabandt/payloadBuddy/releases) for 
 ## License
 
 MIT License
+
+## Logo Attribution
+
+The PayloadBuddy logo incorporates the Go Gopher, which is licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/). The original Go Gopher was created by [Renee French](https://reneefrench.blogspot.com/) and is used with attribution as required by the license. The logo design was created by Dennis Trabandt with assistance from OpenAI ChatGPT 4.1.
+
+**Original Go Gopher**: Created by Renee French, licensed under Creative Commons Attribution 4.0  
+**Logo Design**: Dennis Trabandt (2025), incorporating the Go Gopher with proper attribution
 
 ## Authors
 

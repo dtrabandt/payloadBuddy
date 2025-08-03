@@ -1,0 +1,84 @@
+# Site settings
+title: PayloadBuddy
+description: A sophisticated Go server for testing REST client implementations with large payloads and advanced streaming scenarios
+baseurl: "/payloadBuddy" # Update this to match your GitHub repository name
+url: "https://dtrabandt.github.io" # Update this to your GitHub username
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: jekyll-theme-minimal
+
+# Jekyll plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+header_pages:
+  - index.md
+  - deployment.md
+  - contributing.md
+  - changelog.md
+
+# Exclude files from processing
+exclude:
+  - .github/
+  - vendor/
+  - .bundle/
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - "*.go"
+  - "*.mod"
+  - "*.sum"
+  - payloadBuddy
+  - CLAUDE.md
+
+# Site metadata
+author:
+  name: Dennis Trabandt
+  email: "dennis.trabandt@email.de"
+
+# Social links (optional)
+github_username: dtrabandt
+
+# SEO settings
+# twitter:
+#   username: ""
+#   card: summary
+
+# Google Analytics (optional)
+# google_analytics: UA-NNNNNNNN-N
+
+# Collections for organizing content
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Default layouts
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "page"
