@@ -120,6 +120,10 @@ This helps test:
 - [GitHub Issues](https://github.com/dtrabandt/payloadBuddy/issues) - Bug reports and feature requests
 - [GitHub Releases](https://github.com/dtrabandt/payloadBuddy/releases) - Download binaries
 
+## License
+
+PayloadBuddy is licensed under the [MIT License](https://github.com/dtrabandt/payloadBuddy/blob/main/LICENSE.md).
+
 ## Logo Attribution
 
 The PayloadBuddy logo incorporates the Go Gopher, which is licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/). The original Go Gopher was created by [Renee French](https://reneefrench.blogspot.com/) and is used with attribution as required by the license.
