@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.2.1] - 2025-08-03
+
+### Added
+
+- **Github Pages Preparation**
+  - Added a new workflow called "pages" for jekyll page creation
+  - Added all pages related stuff to the /docs folder
+  - Added a logo for the app into the /logo folder
+
+### Changed
+
+### Fixed
+
+- Version number in main.go
+
 ## [v0.2.0] - 2025-07-31
 
 ### Added
