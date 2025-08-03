@@ -9,8 +9,7 @@ import (
 	"time"
 )
 
-// Release 0.1.0
-var Version = "0.2.1"
+var Version = "0.2.2"
 
 // PayloadPlugin is an interface that must be implemented by
 // any plugin that wants to register a payload handler.

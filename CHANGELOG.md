@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.2.2] - 2025-08-03
+
+### Added
+
+### Changed
+
+### Fixed
+
+- **GitHub Actions Workflow**: Updated Jekyll deployment workflow to use latest stable action versions
+  - Updated `actions/configure-pages` from v3 to v4
+  - Updated `actions/upload-pages-artifact` from v2 to v3  
+  - Updated `actions/deploy-pages` from v2 to v4
+  - Resolved deprecation warnings for artifact upload actions
+
 ## [v0.2.1] - 2025-08-03
 
 ### Added
