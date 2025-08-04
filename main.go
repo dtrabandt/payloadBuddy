@@ -46,16 +46,10 @@ func setupPort(desiredPort string) string {
 	defaultPort := "8080"
 
 	i, err := strconv.Atoi(desiredPort)
-	if err != nil || i <= 0 || i > 65535 {
-		return defaultPort // Return default port if parsing fails or invalid port
-	} else {
-		// Ensure the port is within valid range
-		if i < 1 || i > 65535 {
-			return defaultPort // Return default port if out of range
-		} else {
-			return desiredPort // Return the valid port specified by the user
-		}
+	if err != nil || i < 1 || i > 65535 {
+		return defaultPort // Return default port if parsing fails or out of range
 	}
+	return desiredPort // Return the valid port specified by the user
 }
 
 // verifyScenarioFile validates a scenario file using the scenario validator
