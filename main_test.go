@@ -490,3 +490,35 @@ func TestMain_Refactored_Structure(t *testing.T) {
 		}
 	})
 }
+
+// Test printServiceNowScenarios fallback logic
+func TestPrintServiceNowScenarios_FallbackLogic(t *testing.T) {
+	// Save original scenario manager
+	originalManager := scenarioManager
+	defer func() {
+		scenarioManager = originalManager
+	}()
+
+	// Create a scenario manager with scenarios without descriptions to trigger fallback
+	scenarioManager = NewScenarioManager()
+	
+	// Add scenarios that will trigger specific fallback cases in the switch statement
+	scenarioManager.scenarios["peak_hours"] = &Scenario{
+		SchemaVersion: "1.0.0",
+		ScenarioName:  "Peak Hours Test",
+		ScenarioType:  "peak_hours",
+		BaseDelay:     "100ms",
+		Description:   "", // Empty to trigger fallback
+	}
+	
+	scenarioManager.scenarios["custom_test"] = &Scenario{
+		SchemaVersion: "1.0.0",
+		ScenarioName:  "Custom Test",
+		ScenarioType:  "custom_test",
+		BaseDelay:     "100ms",
+		Description:   "", // Empty to trigger default case
+	}
+
+	// This should trigger the fallback logic in printServiceNowScenarios
+	printServiceNowScenarios()
+}

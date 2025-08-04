@@ -206,7 +206,7 @@ func TestVerifyScenarioFile_Integration(t *testing.T) {
 			name:             "Invalid scenario file",
 			filePath:         invalidFile,
 			expectError:      true,
-			expectedInOutput: "❌ Validation failed:",
+			expectedInOutput: "❌ validation failed:",
 			description:      "Should fail validation due to missing scenario_name",
 		},
 		{

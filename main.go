@@ -58,71 +58,10 @@ func setupPort(desiredPort string) string {
 	}
 }
 
-// verifyScenarioFile validates a scenario file against the JSON schema
+// verifyScenarioFile validates a scenario file using the scenario validator
 func verifyScenarioFile(filePath string) {
-	fmt.Printf("Validating scenario file: %s\n", filePath)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Printf("❌ Error: File does not exist: %s\n", filePath)
-		os.Exit(1)
-	}
-
-	// Read the file
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		fmt.Printf("❌ Error reading file: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create validator and validate
 	validator := NewScenarioValidator()
-	scenario, err := validator.ValidateJSON(content)
-	if err != nil {
-		fmt.Printf("❌ Validation failed:\n%v\n", err)
-		os.Exit(1)
-	}
-
-	// Success - show scenario details
-	fmt.Printf("✅ Validation successful!\n\n")
-	fmt.Printf("📋 Scenario Details:\n")
-	fmt.Printf("   Name: %s\n", scenario.ScenarioName)
-	fmt.Printf("   Type: %s\n", scenario.ScenarioType)
-	fmt.Printf("   Base Delay: %s\n", scenario.BaseDelay)
-	if scenario.DelayStrategy != "" {
-		fmt.Printf("   Delay Strategy: %s\n", scenario.DelayStrategy)
-	}
-	if scenario.ServiceNowMode {
-		fmt.Printf("   ServiceNow Mode: enabled\n")
-	}
-	if scenario.BatchSize > 0 {
-		fmt.Printf("   Batch Size: %d\n", scenario.BatchSize)
-	}
-	if scenario.ResponseLimits != nil {
-		if scenario.ResponseLimits.MaxCount > 0 {
-			fmt.Printf("   Max Count: %d\n", scenario.ResponseLimits.MaxCount)
-		}
-		if scenario.ResponseLimits.DefaultCount > 0 {
-			fmt.Printf("   Default Count: %d\n", scenario.ResponseLimits.DefaultCount)
-		}
-	}
-	if scenario.Description != "" {
-		fmt.Printf("   Description: %s\n", scenario.Description)
-	}
-	if scenario.Metadata != nil {
-		if scenario.Metadata.Author != "" {
-			fmt.Printf("   Author: %s\n", scenario.Metadata.Author)
-		}
-		if scenario.Metadata.Version != "" {
-			fmt.Printf("   Version: %s\n", scenario.Metadata.Version)
-		}
-		if len(scenario.Metadata.Tags) > 0 {
-			fmt.Printf("   Tags: %v\n", scenario.Metadata.Tags)
-		}
-	}
-
-	fmt.Printf("\n🎯 Usage: Use this scenario with ?scenario=%s\n", scenario.ScenarioType)
-	fmt.Printf("💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available\n")
+	validator.ValidateScenarioFile(filePath)
 }
 
 // registerPluginsAndStart registers all plugins and prints startup information

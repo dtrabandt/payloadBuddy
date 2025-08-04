@@ -506,3 +506,50 @@ func TestApplyDelay_NetworkIssuesScenario(t *testing.T) {
 	// Note: We might not hit the long delay due to randomness, but that's okay
 	// The important thing is we're testing the code path
 }
+
+// Test additional streaming handler edge cases
+func TestStreamingPayloadHandler_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"with_batch_size", "/stream_payload?count=3&batch_size=1&delay=1ms"},
+		{"with_servicenow_false", "/stream_payload?count=2&servicenow=false&delay=1ms"},
+		{"strategy_combinations", "/stream_payload?count=1&strategy=fixed&delay=1ms"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.url, nil)
+			w := httptest.NewRecorder()
+
+			StreamingPayloadHandler(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Errorf("Expected status 200 for %s, got %d", tt.url, w.Code)
+			}
+		})
+	}
+}
+
+// Test parameter parsing edge cases
+func TestParameterParsing_EdgeCases(t *testing.T) {
+	t.Run("getDurationParam_boundaries", func(t *testing.T) {
+		tests := []struct {
+			value    string
+			expected time.Duration
+		}{
+			{"0", 0},
+			{"-50", -50 * time.Millisecond},
+			{"999999999", 999999999 * time.Millisecond},
+		}
+
+		for _, tt := range tests {
+			req := httptest.NewRequest("GET", "/?param="+tt.value, nil)
+			result := getDurationParam(req, "param", 100*time.Millisecond)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		}
+	})
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -300,4 +301,96 @@ func (sv *ScenarioValidator) ValidateJSON(jsonData []byte) (*Scenario, error) {
 	}
 
 	return &scenario, nil
+}
+
+// ValidateScenarioFile validates a scenario file and prints the results
+// This function is designed for CLI usage and will exit the process on errors
+func (sv *ScenarioValidator) ValidateScenarioFile(filePath string) {
+	fmt.Printf("Validating scenario file: %s\n", filePath)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf("❌ Error: File does not exist: %s\n", filePath)
+		os.Exit(1)
+	}
+
+	// Read and validate the file
+	scenario, err := sv.ValidateScenarioFileContent(filePath)
+	if err != nil {
+		fmt.Printf("❌ %v\n", err)
+		os.Exit(1)
+	}
+
+	// Success - show scenario details
+	sv.printScenarioDetails(scenario)
+}
+
+// ValidateScenarioFileContent reads and validates a scenario file, returning the scenario or error
+// This function is testable as it doesn't call os.Exit()
+func (sv *ScenarioValidator) ValidateScenarioFileContent(filePath string) (*Scenario, error) {
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file does not exist: %s", filePath)
+	}
+
+	// Read the file
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %v", err)
+	}
+
+	// Validate JSON and scenario
+	scenario, err := sv.ValidateJSON(content)
+	if err != nil {
+		return nil, fmt.Errorf("validation failed:\n%v", err)
+	}
+
+	return scenario, nil
+}
+
+// printScenarioDetails prints detailed information about a validated scenario
+func (sv *ScenarioValidator) printScenarioDetails(scenario *Scenario) {
+	fmt.Printf("✅ Validation successful!\n\n")
+	fmt.Printf("📋 Scenario Details:\n")
+	fmt.Printf("   Name: %s\n", scenario.ScenarioName)
+	fmt.Printf("   Type: %s\n", scenario.ScenarioType)
+	fmt.Printf("   Base Delay: %s\n", scenario.BaseDelay)
+	
+	if scenario.DelayStrategy != "" {
+		fmt.Printf("   Delay Strategy: %s\n", scenario.DelayStrategy)
+	}
+	if scenario.ServiceNowMode {
+		fmt.Printf("   ServiceNow Mode: enabled\n")
+	}
+	if scenario.BatchSize > 0 {
+		fmt.Printf("   Batch Size: %d\n", scenario.BatchSize)
+	}
+	
+	if scenario.ResponseLimits != nil {
+		if scenario.ResponseLimits.MaxCount > 0 {
+			fmt.Printf("   Max Count: %d\n", scenario.ResponseLimits.MaxCount)
+		}
+		if scenario.ResponseLimits.DefaultCount > 0 {
+			fmt.Printf("   Default Count: %d\n", scenario.ResponseLimits.DefaultCount)
+		}
+	}
+	
+	if scenario.Description != "" {
+		fmt.Printf("   Description: %s\n", scenario.Description)
+	}
+	
+	if scenario.Metadata != nil {
+		if scenario.Metadata.Author != "" {
+			fmt.Printf("   Author: %s\n", scenario.Metadata.Author)
+		}
+		if scenario.Metadata.Version != "" {
+			fmt.Printf("   Version: %s\n", scenario.Metadata.Version)
+		}
+		if len(scenario.Metadata.Tags) > 0 {
+			fmt.Printf("   Tags: %v\n", scenario.Metadata.Tags)
+		}
+	}
+
+	fmt.Printf("\n🎯 Usage: Use this scenario with ?scenario=%s\n", scenario.ScenarioType)
+	fmt.Printf("💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available\n")
 }

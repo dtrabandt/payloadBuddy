@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -374,4 +377,111 @@ func stringContains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// Test the refactored ValidateScenarioFileContent function
+func TestValidateScenarioFileContent(t *testing.T) {
+	validator := NewScenarioValidator()
+	
+	// Create temporary directory for test files
+	tempDir := t.TempDir()
+	
+	// Test data
+	validScenario := `{
+		"schema_version": "1.0.0",
+		"scenario_name": "Test Scenario",
+		"scenario_type": "custom",
+		"base_delay": "100ms",
+		"description": "A test scenario"
+	}`
+	
+	invalidScenario := `{
+		"schema_version": "1.0.0",
+		"scenario_type": "custom",
+		"base_delay": "100ms"
+	}`
+	
+	malformedJSON := `{
+		"schema_version": "1.0.0",
+		"scenario_name": "Test"
+		"scenario_type": "custom"
+	}`
+
+	tests := []struct {
+		name        string
+		content     string
+		filename    string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid_scenario",
+			content:     validScenario,
+			filename:    "valid.json",
+			expectError: false,
+		},
+		{
+			name:        "invalid_scenario_missing_name",
+			content:     invalidScenario,
+			filename:    "invalid.json",
+			expectError: true,
+			errorMsg:    "scenario_name is required",
+		},
+		{
+			name:        "malformed_json",
+			content:     malformedJSON,
+			filename:    "malformed.json",
+			expectError: true,
+			errorMsg:    "JSON parsing failed",
+		},
+		{
+			name:        "nonexistent_file",
+			content:     "", // No file will be created
+			filename:    "nonexistent.json",
+			expectError: true,
+			errorMsg:    "file does not exist",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath := filepath.Join(tempDir, tt.filename)
+			
+			// Create file only if content is provided
+			if tt.content != "" {
+				err := os.WriteFile(filePath, []byte(tt.content), 0644)
+				if err != nil {
+					t.Fatalf("Failed to create test file: %v", err)
+				}
+			}
+
+			// Test ValidateScenarioFileContent
+			scenario, err := validator.ValidateScenarioFileContent(filePath)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error containing %q, but got none", tt.errorMsg)
+				} else if !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error containing %q, got %q", tt.errorMsg, err.Error())
+				}
+				if scenario != nil {
+					t.Error("Expected nil scenario on error")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if scenario == nil {
+					t.Error("Expected scenario to be returned")
+				} else {
+					if scenario.ScenarioName != "Test Scenario" {
+						t.Errorf("Expected scenario name 'Test Scenario', got %q", scenario.ScenarioName)
+					}
+					if scenario.ScenarioType != "custom" {
+						t.Errorf("Expected scenario type 'custom', got %q", scenario.ScenarioType)
+					}
+				}
+			}
+		})
+	}
 }
