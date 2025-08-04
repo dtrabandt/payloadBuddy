@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dtrabandt/payloadBuddy/scenarios/scenario_schema_v1.0.0.json",
+  "title": "PayloadBuddy Individual Scenario Configuration",
+  "description": "JSON schema for individual PayloadBuddy scenario configuration files stored in ~/.config/payloadBuddy/scenarios/",
+  "type": "object",
+  "required": [
+    "scenario_name",
+    "scenario_type",
+    "base_delay"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility validation",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "scenario_name": {
+      "type": "string",
+      "description": "Human-readable name for this individual scenario",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of this scenario's purpose and behavior",
+      "maxLength": 500
+    },
+    "scenario_type": {
+      "type": "string",
+      "description": "Type of scenario determining the primary behavior pattern",
+      "enum": [
+        "peak_hours",
+        "maintenance",
+        "network_issues",
+        "database_load",
+        "custom"
+      ]
+    },
+    "base_delay": {
+      "type": "string",
+      "description": "Base delay between items in Go duration format (e.g., '100ms', '1s') or milliseconds",
+      "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$"
+    },
+    "delay_strategy": {
+      "type": "string",
+      "description": "Strategy for applying delays between items",
+      "enum": [
+        "fixed",
+        "random",
+        "progressive",
+        "burst"
+      ],
+      "default": "fixed"
+    },
+    "servicenow_mode": {
+      "type": "boolean",
+      "description": "Enable ServiceNow-specific record generation",
+      "default": false
+    },
+    "batch_size": {
+      "type": "integer",
+      "description": "Number of items to send before flushing response",
+      "minimum": 1,
+      "maximum": 10000,
+      "default": 100
+    },
+    "response_limits": {
+      "type": "object",
+      "description": "Response size and count limitations for this scenario",
+      "properties": {
+        "max_count": {
+          "type": "integer",
+          "description": "Maximum number of items this scenario can generate",
+          "minimum": 1,
+          "maximum": 1000000,
+          "default": 100000
+        },
+        "default_count": {
+          "type": "integer",
+          "description": "Default number of items when count parameter not specified",
+          "minimum": 1,
+          "maximum": 1000000,
+          "default": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_parameters": {
+      "type": "object",
+      "description": "Flexible scenario-specific configuration parameters",
+      "properties": {
+        "delay_overrides": {
+          "type": "object",
+          "description": "Scenario-specific delay configuration overrides",
+          "patternProperties": {
+            "^[a-zA-Z][a-zA-Z0-9_]*$": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$"
+            }
+          }
+        },
+        "timing_patterns": {
+          "type": "object",
+          "description": "Custom timing patterns and intervals",
+          "properties": {
+            "intervals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "probabilities": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              }
+            },
+            "thresholds": {
+              "type": "object",
+              "patternProperties": {
+                "^[a-zA-Z][a-zA-Z0-9_]*$": {
+                  "type": [
+                    "integer",
+                    "number",
+                    "string"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "simulation_config": {
+          "type": "object",
+          "description": "Scenario simulation parameters",
+          "patternProperties": {
+            "^[a-zA-Z][a-zA-Z0-9_]*$": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "array",
+                "object"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "servicenow_config": {
+      "type": "object",
+      "description": "ServiceNow-specific record generation configuration",
+      "properties": {
+        "record_types": {
+          "type": "array",
+          "description": "Types of ServiceNow records to generate",
+          "items": {
+            "type": "string",
+            "enum": [
+              "incident",
+              "problem",
+              "change_request",
+              "catalog_task",
+              "kb_knowledge",
+              "sys_user"
+            ]
+          },
+          "default": [
+            "incident"
+          ]
+        },
+        "state_rotation": {
+          "type": "array",
+          "description": "Available states for record rotation",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "New",
+            "In Progress",
+            "Resolved",
+            "Closed"
+          ]
+        },
+        "number_format": {
+          "type": "string",
+          "description": "Format string for ServiceNow record numbers",
+          "default": "INC%07d"
+        },
+        "sys_id_format": {
+          "type": "string",
+          "description": "Format for ServiceNow sys_id generation",
+          "enum": [
+            "standard",
+            "uuid",
+            "sequential"
+          ],
+          "default": "standard"
+        },
+        "custom_fields": {
+          "type": "object",
+          "description": "Additional custom fields for ServiceNow records",
+          "patternProperties": {
+            "^[a-zA-Z][a-zA-Z0-9_]*$": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "table_specific_config": {
+          "type": "object",
+          "description": "Table-specific configuration overrides",
+          "patternProperties": {
+            "^[a-zA-Z][a-zA-Z0-9_]*$": {
+              "type": "object",
+              "properties": {
+                "number_format": {
+                  "type": "string"
+                },
+                "state_rotation": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "error_injection": {
+      "type": "object",
+      "description": "Error injection configuration for testing error handling",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "error_rate": {
+          "type": "number",
+          "description": "Probability of errors (0.0 to 1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.01
+        },
+        "error_types": {
+          "type": "array",
+          "description": "Types of errors to inject",
+          "items": {
+            "type": "string",
+            "enum": [
+              "timeout",
+              "authentication_failure",
+              "server_error",
+              "bad_request",
+              "rate_limit",
+              "connection_reset"
+            ]
+          },
+          "default": [
+            "timeout",
+            "server_error"
+          ]
+        },
+        "recovery_delay": {
+          "type": "string",
+          "description": "Delay before resuming normal operation after error",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$",
+          "default": "1s"
+        },
+        "consecutive_error_limit": {
+          "type": "integer",
+          "description": "Maximum consecutive errors before forcing success",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "performance_monitoring": {
+      "type": "object",
+      "description": "Performance monitoring and logging configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "metrics_interval": {
+          "type": "integer",
+          "description": "Interval for collecting performance metrics (in items processed)",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 1000
+        },
+        "memory_tracking": {
+          "type": "boolean",
+          "description": "Enable memory usage tracking",
+          "default": false
+        },
+        "checkpoint_logging": {
+          "type": "boolean",
+          "description": "Enable checkpoint logging for long-running scenarios",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Scenario metadata for documentation and management",
+      "properties": {
+        "author": {
+          "type": "string",
+          "description": "Scenario author or creator"
+        },
+        "created_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Scenario creation date"
+        },
+        "modified_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Last modification date"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Individual scenario version"
+        },
+        "project": {
+          "type": "string",
+          "description": "Associated project or client"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags for scenario categorization",
+          "items": {
+            "type": "string"
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "properties": {
+            "min_payloadbuddy_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$"
+            },
+            "tested_versions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+\\.\\d+$"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

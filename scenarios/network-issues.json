@@ -1,0 +1,67 @@
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "Network Connectivity Issues",
+    "description": "Simulates unstable network conditions with random delay spikes up to 3 seconds occurring 10% of the time",
+    "scenario_type": "network_issues",
+    "base_delay": "10ms",
+    "delay_strategy": "random",
+    "servicenow_mode": false,
+    "batch_size": 100,
+    "response_limits": {
+        "max_count": 25000,
+        "default_count": 10000
+    },
+    "scenario_parameters": {
+        "delay_overrides": {
+            "min_spike_delay": "0ms",
+            "max_spike_delay": "3s"
+        },
+        "timing_patterns": {
+            "intervals": [],
+            "probabilities": [
+                0.1
+            ],
+            "thresholds": {
+                "spike_probability": 0.1,
+                "max_spike_duration": 3000
+            }
+        },
+        "simulation_config": {
+            "load_type": "network_issues",
+            "random_spikes": true,
+            "spike_probability": 0.1,
+            "spike_range_ms": [
+                0,
+                3000
+            ],
+            "description": "10% chance of network spike with random delay between 0-3000ms, otherwise base delay"
+        }
+    },
+    "servicenow_config": {
+        "record_types": [
+            "incident"
+        ],
+        "state_rotation": [
+            "New",
+            "In Progress",
+            "Resolved",
+            "Closed"
+        ],
+        "number_format": "INC%07d",
+        "sys_id_format": "standard"
+    },
+    "metadata": {
+        "author": "Dennis Trabandt",
+        "created_date": "2025-08-04",
+        "version": "1.0.0",
+        "project": "PayloadBuddy Core Scenarios",
+        "tags": [
+            "network-issues",
+            "random-delays",
+            "connectivity-testing"
+        ],
+        "compatibility": {
+            "min_payloadbuddy_version": "1.0.0"
+        }
+    }
+}

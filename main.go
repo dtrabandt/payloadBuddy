@@ -11,6 +11,9 @@ import (
 
 var Version = "0.2.5"
 
+// Global scenario manager
+var scenarioManager *ScenarioManager
+
 // PayloadPlugin is an interface that must be implemented by
 // any plugin that wants to register a payload handler.
 // It provides the Path, Handler, and OpenAPISpec methods for the HTTP endpoint.
@@ -32,7 +35,8 @@ func registerPlugin(p PayloadPlugin) {
 
 // Setup the variables from the command line flags.
 var (
-	paramPort = flag.String("port", "8080", "Port to run the HTTP server on")
+	paramPort   = flag.String("port", "8080", "Port to run the HTTP server on")
+	paramVerify = flag.String("verify", "", "Validate a scenario file against the JSON schema and exit")
 )
 
 // Setup the port for the HTTP server.
@@ -54,12 +58,88 @@ func setupPort(desiredPort string) string {
 	}
 }
 
+// verifyScenarioFile validates a scenario file against the JSON schema
+func verifyScenarioFile(filePath string) {
+	fmt.Printf("Validating scenario file: %s\n", filePath)
+	
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf("❌ Error: File does not exist: %s\n", filePath)
+		os.Exit(1)
+	}
+	
+	// Read the file
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Printf("❌ Error reading file: %v\n", err)
+		os.Exit(1)
+	}
+	
+	// Create validator and validate
+	validator := NewScenarioValidator()
+	scenario, err := validator.ValidateJSON(content)
+	if err != nil {
+		fmt.Printf("❌ Validation failed:\n%v\n", err)
+		os.Exit(1)
+	}
+	
+	// Success - show scenario details
+	fmt.Printf("✅ Validation successful!\n\n")
+	fmt.Printf("📋 Scenario Details:\n")
+	fmt.Printf("   Name: %s\n", scenario.ScenarioName)
+	fmt.Printf("   Type: %s\n", scenario.ScenarioType)
+	fmt.Printf("   Base Delay: %s\n", scenario.BaseDelay)
+	if scenario.DelayStrategy != "" {
+		fmt.Printf("   Delay Strategy: %s\n", scenario.DelayStrategy)
+	}
+	if scenario.ServiceNowMode {
+		fmt.Printf("   ServiceNow Mode: enabled\n")
+	}
+	if scenario.BatchSize > 0 {
+		fmt.Printf("   Batch Size: %d\n", scenario.BatchSize)
+	}
+	if scenario.ResponseLimits != nil {
+		if scenario.ResponseLimits.MaxCount > 0 {
+			fmt.Printf("   Max Count: %d\n", scenario.ResponseLimits.MaxCount)
+		}
+		if scenario.ResponseLimits.DefaultCount > 0 {
+			fmt.Printf("   Default Count: %d\n", scenario.ResponseLimits.DefaultCount)
+		}
+	}
+	if scenario.Description != "" {
+		fmt.Printf("   Description: %s\n", scenario.Description)
+	}
+	if scenario.Metadata != nil {
+		if scenario.Metadata.Author != "" {
+			fmt.Printf("   Author: %s\n", scenario.Metadata.Author)
+		}
+		if scenario.Metadata.Version != "" {
+			fmt.Printf("   Version: %s\n", scenario.Metadata.Version)
+		}
+		if len(scenario.Metadata.Tags) > 0 {
+			fmt.Printf("   Tags: %v\n", scenario.Metadata.Tags)
+		}
+	}
+	
+	fmt.Printf("\n🎯 Usage: Use this scenario with ?scenario=%s\n", scenario.ScenarioType)
+	fmt.Printf("💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available\n")
+}
+
 // main is the entry point for the payloadBuddy application.
 // It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
 func main() {
 	// Parse command line flags
 	flag.Parse()
+
+	// Handle scenario file verification
+	if *paramVerify != "" {
+		verifyScenarioFile(*paramVerify)
+		return
+	}
+
+	// Initialize scenario manager
+	scenarioManager = NewScenarioManager()
 
 	// Setup authentication if enabled
 	setupAuthentication()

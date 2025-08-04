@@ -24,7 +24,7 @@ func createStreamAuthRequest(method, path string, username, password string) *ht
 
 func TestStreamingPayloadHandler_Basic(t *testing.T) {
 	*enableAuth = false
-	req := httptest.NewRequest("GET", "/stream_payload", nil)
+	req := httptest.NewRequest("GET", "/stream_payload?count=3&delay=1ms", nil)
 	w := httptest.NewRecorder()
 
 	StreamingPayloadHandler(w, req)
@@ -201,7 +201,7 @@ func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
 	authPassword = "streampass"
 
 	// Test without credentials
-	req := httptest.NewRequest("GET", "/stream_payload", nil)
+	req := httptest.NewRequest("GET", "/stream_payload?count=1&delay=1ms", nil)
 	w := httptest.NewRecorder()
 
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
@@ -212,7 +212,7 @@ func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
 	}
 
 	// Test with wrong credentials
-	req = createStreamAuthRequest("GET", "/stream_payload", "wrong", "credentials")
+	req = createStreamAuthRequest("GET", "/stream_payload?count=1&delay=1ms", "wrong", "credentials")
 	w = httptest.NewRecorder()
 
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)
@@ -223,7 +223,7 @@ func TestStreamingPayloadHandler_AuthenticationRequired(t *testing.T) {
 	}
 
 	// Test with correct credentials
-	req = createStreamAuthRequest("GET", "/stream_payload", "streamuser", "streampass")
+	req = createStreamAuthRequest("GET", "/stream_payload?count=1&delay=1ms", "streamuser", "streampass")
 	w = httptest.NewRecorder()
 
 	basicAuthMiddleware(StreamingPayloadHandler)(w, req)

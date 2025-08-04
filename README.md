@@ -37,6 +37,15 @@ This server helps consultants and developers:
 - **Context-Aware**: Handles client cancellation gracefully
 - **Real-time Streaming**: Chunked transfer encoding with configurable flush intervals
 
+### 📋 **Configurable Scenario System**
+- **Dynamic Scenario Loading**: JSON-based scenario configuration with comprehensive schema validation
+- **Embedded Scenarios**: Core scenarios built into the binary for single-executable deployment
+- **User-Defined Scenarios**: Custom scenarios in `$HOME/.config/payloadBuddy/scenarios/` directory
+- **Scenario Override**: User scenarios override embedded scenarios with same `scenario_type`
+- **Automatic Directory Creation**: User scenario directory created automatically on first run
+- **Version Compatibility**: Built-in version compatibility checking framework
+- **Real-time Configuration**: Scenario-based defaults for count, batch_size, and ServiceNow mode
+
 ### 🏗️ **Architecture**
 - **Plugin System**: Easily extend with new payload handlers via `PayloadPlugin` interface
 - **OpenAPI 3.1.1 Integration**: Automatic documentation generation from plugin specifications
@@ -138,6 +147,7 @@ For a complete list of available options, use the built-in help:
 - `-auth`: Enable basic authentication (default: false)
 - `-user=<username>`: Set username (auto-generated if not specified)
 - `-pass=<password>`: Set password (auto-generated if not specified)
+- `-verify=<file>`: Validate a scenario file against the JSON schema and exit
 
 The server listens on the specified port (default: 8080) and provides detailed startup information with example URLs and authentication details.
 
@@ -262,25 +272,53 @@ Interactive Swagger UI for exploring and testing the API.
 
 ## ServiceNow Testing Scenarios
 
-### Peak Hours (`scenario=peak_hours`)
-- Simulates slower response times during peak ServiceNow usage
-- 200ms base delay between items
-- Perfect for testing Flow Action timeouts
+PayloadBuddy includes four built-in scenarios designed to simulate real ServiceNow conditions:
 
-### Maintenance Window (`scenario=maintenance`)
-- Simulates maintenance periods with periodic spikes
-- 500ms base delay with 2s spikes every 500 items
-- Tests resilience during ServiceNow maintenance windows
+- **Peak Hours** (`scenario=peak_hours`): 200ms delays simulating peak usage
+- **Maintenance Window** (`scenario=maintenance`): 500ms delays with 2s spikes
+- **Network Issues** (`scenario=network_issues`): Random delays up to 3s
+- **Database Load** (`scenario=database_load`): Progressive performance degradation
 
-### Network Issues (`scenario=network_issues`)
-- Random network delays and interruptions
-- 10% chance of 0-3 second delays
-- Simulates unstable network conditions
+### Custom Scenario Configuration
 
-### Database Load (`scenario=database_load`)
-- Progressive performance degradation
-- Delay increases as more items are processed
-- Simulates database performance issues under load
+PayloadBuddy supports user-defined scenarios through JSON configuration files with comprehensive schema validation, automatic loading, and override capabilities.
+
+> 📖 **Complete Scenario Guide**: For detailed information about creating custom scenarios, JSON schema reference, advanced features, and troubleshooting, see **[SCENARIOS.md](SCENARIOS.md)**.
+
+#### Quick Example
+
+Create `$HOME/.config/payloadBuddy/scenarios/my-test.json`:
+
+```json
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "Quick Test",
+    "scenario_type": "custom",
+    "base_delay": "100ms",
+    "delay_strategy": "progressive",
+    "servicenow_mode": true,
+    "batch_size": 50
+}
+```
+
+**Validation:**
+```sh
+# Validate your scenario file before deploying
+./payloadBuddy -verify $HOME/.config/payloadBuddy/scenarios/my-test.json
+```
+
+**Usage:**
+```sh
+curl -u username:password "http://localhost:8080/stream_payload?scenario=custom"
+```
+
+### Key Features
+
+- **📁 Dynamic Loading**: Scenarios loaded from `$HOME/.config/payloadBuddy/scenarios/`
+- **🔄 Override Support**: User scenarios override built-in scenarios
+- **✅ Schema Validation**: Comprehensive JSON schema validation
+- **📊 Embedded Scenarios**: Core scenarios built into binary
+- **🔧 Advanced Configuration**: Error injection, performance monitoring, custom timing patterns
 
 ## Testing
 
@@ -303,6 +341,11 @@ For detailed development guidelines, plugin creation, and contribution workflow,
 ├── *_payload_handler.go             # Endpoint implementations
 ├── auth.go                          # Authentication middleware
 ├── documentation_handler.go         # OpenAPI spec and Swagger UI
+├── scenario_manager.go              # Dynamic scenario loading and management
+├── scenario_validator.go            # JSON schema validation for scenarios
+├── scenarios/                       # Embedded scenario JSON files and schema
+│   ├── *.json                       # Built-in scenario configurations
+│   └── scenario_schema_v1.0.0.json  # JSON schema for validation
 ├── *_test.go                        # Comprehensive test suite
 ├── .github/workflows/               # CI/CD automation
 ├── README.md                        # User documentation

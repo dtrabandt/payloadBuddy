@@ -9,7 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Configurable Scenario System**:
+  - Dynamic scenario loading from JSON configuration files
+  - Embedded scenarios included in binary for single-executable deployment
+  - User-defined scenarios in `$HOME/.config/payloadBuddy/scenarios/` directory
+  - Comprehensive JSON schema validation for all scenarios
+  - User scenarios override embedded scenarios with same `scenario_type`
+  - Automatic scenario directory creation on first run
+  - Version compatibility checking framework
+  - Detailed scenario loading and validation logging
+
+- **Enhanced Scenario Management**:
+  - ScenarioManager for centralized scenario handling
+  - ScenarioValidator with comprehensive JSON schema validation
+  - Support for all schema features: delay strategies, ServiceNow config, error injection, performance monitoring
+  - Backward compatibility with existing hardcoded scenario logic
+  - Real-time scenario-based parameter defaults (count, batch_size, ServiceNow mode)
+
+- **Developer Experience**:
+  - Complete test coverage for scenario system (manager and validator)
+  - Comprehensive validation error messages
+  - User scenario override testing with temporary directories
+  - Embedded scenario loading verification
+
+- **Command-Line Tools**:
+  - `-verify` flag for validating scenario files before deployment
+  - Detailed validation output with scenario information and usage tips
+  - Exit codes for integration with CI/CD pipelines and scripts
+
 ### Changed
+
+- **Streaming Handler**: Updated to use dynamic scenario configuration
+  - Scenario-aware default parameter selection
+  - Enhanced delay calculation using scenario-specific logic
+  - Improved ServiceNow mode handling based on scenario configuration
+  - Maintained backward compatibility with existing query parameters
+
+- **Application Startup**: 
+  - Scenario manager initialization on startup
+  - Enhanced logging showing loaded scenarios with names and types
+  - User scenario directory creation messaging
 
 ### Fixed
 

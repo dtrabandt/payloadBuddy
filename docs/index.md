@@ -29,6 +29,7 @@ tar -xzf payloadBuddy-vX.X.X-linux-amd64.tar.gz
 
 - **🚀 Large Payload Testing**: REST endpoint returning up to 1M JSON objects
 - **📡 Advanced Streaming**: Configurable delays, patterns, and ServiceNow scenarios  
+- **📋 Configurable Scenarios**: JSON-based scenario system with user customization
 - **🔐 Security Features**: Optional HTTP Basic Authentication
 - **📖 Interactive Documentation**: Built-in Swagger UI and OpenAPI specs
 - **🏗️ Plugin Architecture**: Easily extensible with new endpoints
@@ -109,8 +110,50 @@ This helps test:
 - **State management** with realistic ServiceNow state values
 - **Date handling** with ServiceNow's datetime format
 
+## Custom Scenario Configuration
+
+PayloadBuddy supports user-defined scenarios through JSON configuration files, allowing you to create testing scenarios tailored to your specific ServiceNow environment.
+
+### Quick Start
+
+1. **Automatic Setup**: PayloadBuddy creates `$HOME/.config/payloadBuddy/scenarios/` on first run
+2. **Add Scenarios**: Create `.json` files with your custom configurations  
+3. **Immediate Use**: Scenarios are loaded automatically and available via API
+
+### Simple Example
+
+Create `$HOME/.config/payloadBuddy/scenarios/my-test.json`:
+
+```json
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "Quick Test",
+    "scenario_type": "custom", 
+    "base_delay": "100ms",
+    "delay_strategy": "progressive",
+    "servicenow_mode": true,
+    "batch_size": 50
+}
+```
+
+**Usage:**
+```bash
+curl -u user:pass "http://localhost:8080/stream_payload?scenario=custom"
+```
+
+### Key Features
+
+- **📁 Dynamic Loading**: Automatic loading from user directory
+- **🔄 Override Support**: User scenarios override built-in scenarios
+- **✅ Schema Validation**: Comprehensive JSON validation with detailed error messages
+- **📊 Embedded Scenarios**: Core scenarios built into binary for immediate use
+- **🔧 Advanced Configuration**: Error injection, performance monitoring, custom timing patterns
+
+> 📖 **Complete Guide**: For detailed documentation, JSON schema reference, advanced examples, and troubleshooting, see the comprehensive **[Scenario Configuration Guide](scenarios)**.
+
 ## Documentation
 
+- **[Scenario Configuration Guide](scenarios)** - Complete guide to custom scenarios
 - **[Deployment Guide](deployment)** - ngrok, Docker, and production deployments
 - **[Contributing](contributing)** - Development workflow and TDD practices  
 - **[Changelog](changelog)** - Version history and release notes

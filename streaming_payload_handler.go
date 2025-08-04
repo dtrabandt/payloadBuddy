@@ -131,40 +131,90 @@ func generateSysID() string {
 func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Duration, scenario string, itemIndex int) error {
 	var delay time.Duration
 
-	// ServiceNow scenario-based delays
-	switch scenario {
-	case "peak_hours":
-		delay = 200 * time.Millisecond
-	case "maintenance":
-		if itemIndex%500 == 0 {
-			delay = 2 * time.Second // Maintenance spike
-		} else {
-			delay = 500 * time.Millisecond
-		}
-	case "network_issues":
-		randFloat, err := secureRandFloat32()
-		if err != nil {
-			delay = baseDelay
-		} else if randFloat < 0.1 { // 10% chance of network spike
-			randInt, err := secureRandIntn(3000)
+	// Check if we have a scenario configured
+	if scenarioManager != nil && scenario != "" {
+		calculatedDelay, calculatedStrategy := scenarioManager.GetScenarioDelay(scenario, itemIndex)
+
+		// For network_issues scenario, we still need to apply random logic
+		if scenario == "network_issues" {
+			randFloat, err := secureRandFloat32()
 			if err != nil {
-				delay = baseDelay
+				delay = calculatedDelay
+			} else if randFloat < 0.1 { // 10% chance of network spike
+				randInt, err := secureRandIntn(3000)
+				if err != nil {
+					delay = calculatedDelay
+				} else {
+					delay = time.Duration(randInt) * time.Millisecond
+				}
 			} else {
-				delay = time.Duration(randInt) * time.Millisecond
+				delay = calculatedDelay
 			}
 		} else {
-			delay = baseDelay
+			delay = calculatedDelay
+			strategy = calculatedStrategy
 		}
-	case "database_load":
-		dbLoadDelay := time.Duration(itemIndex/100) * 10 * time.Millisecond
-		delay = baseDelay + dbLoadDelay
-	default:
-		// Apply strategy-based delay
+	} else {
+		// Fallback to legacy hardcoded scenario logic for backward compatibility
+		switch scenario {
+		case "peak_hours":
+			delay = 200 * time.Millisecond
+		case "maintenance":
+			if itemIndex%500 == 0 {
+				delay = 2 * time.Second // Maintenance spike
+			} else {
+				delay = 500 * time.Millisecond
+			}
+		case "network_issues":
+			randFloat, err := secureRandFloat32()
+			if err != nil {
+				delay = baseDelay
+			} else if randFloat < 0.1 { // 10% chance of network spike
+				randInt, err := secureRandIntn(3000)
+				if err != nil {
+					delay = baseDelay
+				} else {
+					delay = time.Duration(randInt) * time.Millisecond
+				}
+			} else {
+				delay = baseDelay
+			}
+		case "database_load":
+			dbLoadDelay := time.Duration(itemIndex/100) * 10 * time.Millisecond
+			delay = baseDelay + dbLoadDelay
+		default:
+			// Apply strategy-based delay
+			switch strategy {
+			case NoDelay:
+				return nil
+			case FixedDelay:
+				delay = baseDelay
+			case RandomDelay:
+				randInt64, err := secureRandInt63n(int64(baseDelay * 2))
+				if err != nil {
+					delay = baseDelay // Fallback to fixed delay if crypto/rand fails
+				} else {
+					delay = time.Duration(randInt64)
+				}
+			case ProgressiveDelay:
+				delay = baseDelay * time.Duration(itemIndex/1000+1)
+			case BurstDelay:
+				if itemIndex%100 == 0 && itemIndex > 0 {
+					delay = baseDelay * 10 // Long pause after burst
+				} else {
+					delay = baseDelay / 10 // Short pause between items
+				}
+			}
+		}
+	}
+
+	// Apply strategy-based modifications if not handled by scenario
+	if scenario == "" || (scenarioManager == nil) {
 		switch strategy {
 		case NoDelay:
 			return nil
 		case FixedDelay:
-			delay = baseDelay
+			// delay already set
 		case RandomDelay:
 			randInt64, err := secureRandInt63n(int64(baseDelay * 2))
 			if err != nil {
@@ -213,17 +263,37 @@ func applyDelay(ctx context.Context, strategy DelayStrategy, baseDelay time.Dura
 func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Parse parameters
-	count := getIntParam(r, "count", 10000)
-	baseDelay := getDurationParam(r, "delay", 10)
-	strategy := getDelayStrategy(r)
+	// Parse basic parameters
 	scenario := strings.ToLower(r.URL.Query().Get("scenario"))
-	batchSize := getIntParam(r, "batch_size", 100)
-	serviceNowMode := r.URL.Query().Get("servicenow") == "true"
+
+	// Get scenario-based defaults if scenario manager is available and scenario is specified
+	var defaultCount, maxCount, defaultBatchSize int
+	var defaultServiceNowMode bool
+	if scenarioManager != nil && scenario != "" {
+		defaultBatchSize, defaultServiceNowMode, maxCount, defaultCount = scenarioManager.GetScenarioConfig(scenario)
+	} else {
+		// Use hardcoded defaults for backward compatibility
+		defaultCount = 10000
+		maxCount = 1000000
+		defaultBatchSize = 100
+		defaultServiceNowMode = false
+	}
+
+	// Parse parameters with scenario-aware defaults
+	count := getIntParam(r, "count", defaultCount)
+	baseDelay := getDurationParam(r, "delay", 10*time.Millisecond)
+	strategy := getDelayStrategy(r)
+	batchSize := getIntParam(r, "batch_size", defaultBatchSize)
+
+	// ServiceNow mode: use scenario default unless explicitly overridden
+	serviceNowMode := defaultServiceNowMode
+	if serviceNowParam := r.URL.Query().Get("servicenow"); serviceNowParam != "" {
+		serviceNowMode = serviceNowParam == "true"
+	}
 
 	// Validate parameters
-	if count <= 0 || count > 1000000 { // Reasonable limits
-		http.Error(w, "Count must be between 1 and 1,000,000", http.StatusBadRequest)
+	if count <= 0 || count > maxCount {
+		http.Error(w, fmt.Sprintf("Count must be between 1 and %d", maxCount), http.StatusBadRequest)
 		return
 	}
 
