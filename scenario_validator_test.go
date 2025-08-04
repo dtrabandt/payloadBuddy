@@ -382,10 +382,10 @@ func stringContains(s, substr string) bool {
 // Test the refactored ValidateScenarioFileContent function
 func TestValidateScenarioFileContent(t *testing.T) {
 	validator := NewScenarioValidator()
-	
+
 	// Create temporary directory for test files
 	tempDir := t.TempDir()
-	
+
 	// Test data
 	validScenario := `{
 		"schema_version": "1.0.0",
@@ -394,13 +394,13 @@ func TestValidateScenarioFileContent(t *testing.T) {
 		"base_delay": "100ms",
 		"description": "A test scenario"
 	}`
-	
+
 	invalidScenario := `{
 		"schema_version": "1.0.0",
 		"scenario_type": "custom",
 		"base_delay": "100ms"
 	}`
-	
+
 	malformedJSON := `{
 		"schema_version": "1.0.0",
 		"scenario_name": "Test"
@@ -446,7 +446,7 @@ func TestValidateScenarioFileContent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filePath := filepath.Join(tempDir, tt.filename)
-			
+
 			// Create file only if content is provided
 			if tt.content != "" {
 				err := os.WriteFile(filePath, []byte(tt.content), 0644)

@@ -16,7 +16,7 @@ func TestPayloadPlugins_Interface(t *testing.T) {
 			expectedPath: "/rest_payload",
 		},
 		{
-			name:         "StreamingPayloadPlugin", 
+			name:         "StreamingPayloadPlugin",
 			plugin:       StreamingPayloadPlugin{},
 			expectedPath: "/stream_payload",
 		},
@@ -320,7 +320,7 @@ func TestPrintServiceNowScenarios(t *testing.T) {
 func TestRegisterPluginsAndStart_PortLogic(t *testing.T) {
 	// Test only the port setup logic, not the actual HTTP registration
 	// since that causes conflicts when called multiple times in tests
-	
+
 	// Save original state
 	originalParamPort := paramPort
 	defer func() {
@@ -396,7 +396,7 @@ func TestPrintUsageExamples(t *testing.T) {
 		},
 		{
 			name: "valid_port_9999",
-			port: "9999", 
+			port: "9999",
 			setupFunc: func() {
 				scenarioManager = NewScenarioManager()
 			},
@@ -433,7 +433,7 @@ func TestStartHTTPServer_Configuration(t *testing.T) {
 	// This function calls ListenAndServe which would block,
 	// so we test the server configuration by checking the setup
 	// We can't easily test the actual server start without complex mocking
-	
+
 	// Test that the function exists and doesn't panic during setup
 	// The actual server start is tested in integration tests
 	t.Skip("startHTTPServer calls ListenAndServe which blocks - tested in integration tests")
@@ -445,7 +445,7 @@ func TestMain_Refactored_Structure(t *testing.T) {
 	originalManager := scenarioManager
 	originalPlugins := plugins
 	defer func() {
-		scenarioManager = originalManager  
+		scenarioManager = originalManager
 		plugins = originalPlugins
 	}()
 
@@ -461,8 +461,8 @@ func TestMain_Refactored_Structure(t *testing.T) {
 		if scenarioManager == nil {
 			t.Error("Scenario manager should be initialized")
 		}
-		
-		scenarios := scenarioManager.ListScenarios() 
+
+		scenarios := scenarioManager.ListScenarios()
 		if len(scenarios) == 0 {
 			t.Error("Expected some scenarios to be loaded")
 		}
@@ -472,7 +472,7 @@ func TestMain_Refactored_Structure(t *testing.T) {
 		if len(plugins) == 0 {
 			t.Error("Expected plugins to be registered")
 		}
-		
+
 		for _, plugin := range plugins {
 			if plugin.Path() == "" {
 				t.Error("Plugin should have non-empty path")
@@ -501,7 +501,7 @@ func TestPrintServiceNowScenarios_FallbackLogic(t *testing.T) {
 
 	// Create a scenario manager with scenarios without descriptions to trigger fallback
 	scenarioManager = NewScenarioManager()
-	
+
 	// Add scenarios that will trigger specific fallback cases in the switch statement
 	scenarioManager.scenarios["peak_hours"] = &Scenario{
 		SchemaVersion: "1.0.0",
@@ -510,7 +510,7 @@ func TestPrintServiceNowScenarios_FallbackLogic(t *testing.T) {
 		BaseDelay:     "100ms",
 		Description:   "", // Empty to trigger fallback
 	}
-	
+
 	scenarioManager.scenarios["custom_test"] = &Scenario{
 		SchemaVersion: "1.0.0",
 		ScenarioName:  "Custom Test",

@@ -64,9 +64,8 @@ func verifyScenarioFile(filePath string) {
 	validator.ValidateScenarioFile(filePath)
 }
 
-// registerPluginsAndStart registers all plugins and prints startup information
-func registerPluginsAndStart() string {
-	// Register plugins with conditional authentication middleware
+// registerPlugins registers all plugins with conditional authentication middleware
+func registerPlugins() {
 	for _, p := range plugins {
 		path := p.Path()
 		// Exclude documentation endpoints from authentication for better UX
@@ -78,8 +77,10 @@ func registerPluginsAndStart() string {
 			fmt.Printf("Registered endpoint: %s\n", path)
 		}
 	}
+}
 
-	port := setupPort(*paramPort)
+// printStartupInfo prints application startup information and usage examples
+func printStartupInfo(port string) {
 	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
 
 	// Print authentication info if enabled
@@ -87,7 +88,13 @@ func registerPluginsAndStart() string {
 
 	// Print usage examples
 	printUsageExamples(port)
+}
 
+// initializeServer registers plugins and prepares server startup
+func initializeServer() string {
+	registerPlugins()
+	port := setupPort(*paramPort)
+	printStartupInfo(port)
 	return port
 }
 
@@ -114,10 +121,10 @@ func printUsageExamples(port string) {
 // printServiceNowScenarios prints all available ServiceNow scenarios including custom ones
 func printServiceNowScenarios() {
 	fmt.Println("\nServiceNow test scenarios:")
-	
+
 	// Get all scenario types from the scenario manager
 	scenarioTypes := scenarioManager.ListScenarios()
-	
+
 	for _, scenarioType := range scenarioTypes {
 		scenario := scenarioManager.GetScenario(scenarioType)
 		if scenario != nil && scenario.Description != "" {
@@ -143,7 +150,7 @@ func printServiceNowScenarios() {
 // startHTTPServer starts the HTTP server with proper configuration
 func startHTTPServer(port string) {
 	addr := ":" + port
-	
+
 	fmt.Println("\nPress Ctrl+C to stop the server")
 
 	// Start the HTTP server with proper timeouts to prevent resource exhaustion
@@ -181,8 +188,8 @@ func main() {
 	// Setup authentication if enabled
 	setupAuthentication()
 
-	// Register plugins and start server
-	port := registerPluginsAndStart()
+	// Initialize server components
+	port := initializeServer()
 	startHTTPServer(port)
 }
 

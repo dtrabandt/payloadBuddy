@@ -355,7 +355,7 @@ func (sv *ScenarioValidator) printScenarioDetails(scenario *Scenario) {
 	fmt.Printf("   Name: %s\n", scenario.ScenarioName)
 	fmt.Printf("   Type: %s\n", scenario.ScenarioType)
 	fmt.Printf("   Base Delay: %s\n", scenario.BaseDelay)
-	
+
 	if scenario.DelayStrategy != "" {
 		fmt.Printf("   Delay Strategy: %s\n", scenario.DelayStrategy)
 	}
@@ -365,7 +365,7 @@ func (sv *ScenarioValidator) printScenarioDetails(scenario *Scenario) {
 	if scenario.BatchSize > 0 {
 		fmt.Printf("   Batch Size: %d\n", scenario.BatchSize)
 	}
-	
+
 	if scenario.ResponseLimits != nil {
 		if scenario.ResponseLimits.MaxCount > 0 {
 			fmt.Printf("   Max Count: %d\n", scenario.ResponseLimits.MaxCount)
@@ -374,11 +374,11 @@ func (sv *ScenarioValidator) printScenarioDetails(scenario *Scenario) {
 			fmt.Printf("   Default Count: %d\n", scenario.ResponseLimits.DefaultCount)
 		}
 	}
-	
+
 	if scenario.Description != "" {
 		fmt.Printf("   Description: %s\n", scenario.Description)
 	}
-	
+
 	if scenario.Metadata != nil {
 		if scenario.Metadata.Author != "" {
 			fmt.Printf("   Author: %s\n", scenario.Metadata.Author)

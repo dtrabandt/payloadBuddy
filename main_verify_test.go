@@ -81,7 +81,7 @@ func TestVerifyScenarioFile_ValidationLogic(t *testing.T) {
 
 	// Create test files using helper function
 	validFile := createTestFile(t, tempDir, "valid.json", validScenarioTemplate)
-	invalidFile := createTestFile(t, tempDir, "invalid.json", invalidScenarioTemplate) 
+	invalidFile := createTestFile(t, tempDir, "invalid.json", invalidScenarioTemplate)
 	malformedFile := createTestFile(t, tempDir, "malformed.json", malformedJSONTemplate)
 
 	tests := []struct {
@@ -316,7 +316,7 @@ func TestValidScenarioExamples(t *testing.T) {
 			scenario: validScenarioTemplate,
 		},
 		{
-			name:     "Comprehensive scenario template", 
+			name:     "Comprehensive scenario template",
 			scenario: comprehensiveScenarioTemplate,
 		},
 		{
