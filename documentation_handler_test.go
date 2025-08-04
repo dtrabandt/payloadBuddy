@@ -324,7 +324,7 @@ func TestDocumentationEndpoints_NoAuthRequired(t *testing.T) {
 			if tt.path == "/stream_payload" {
 				path = tt.path + "?count=1&delay=1ms"
 			}
-			
+
 			req, err := http.NewRequest("GET", path, nil)
 			if err != nil {
 				t.Fatal(err)

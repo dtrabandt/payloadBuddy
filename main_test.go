@@ -202,4 +202,54 @@ func TestSetupPort(t *testing.T) {
 	if port := setupPort("-1"); port != expectedPort {
 		t.Errorf("Expected default port %s for negative input, got %s", expectedPort, port)
 	}
+
+	// Test edge case: port exactly at maximum valid range
+	if port := setupPort("65535"); port != "65535" {
+		t.Errorf("Expected port 65535, got %s", port)
+	}
+
+	// Test edge case: port just above maximum valid range
+	if port := setupPort("65536"); port != expectedPort {
+		t.Errorf("Expected default port %s for out of range input, got %s", expectedPort, port)
+	}
+
+	// Test edge case: port at minimum valid range
+	if port := setupPort("1"); port != "1" {
+		t.Errorf("Expected port 1, got %s", port)
+	}
+}
+
+func TestSetupPort_Comprehensive(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    string
+		description string
+	}{
+		{"empty_string", "", "8080", "Empty string should return default port"},
+		{"valid_port_mid_range", "9090", "9090", "Valid port in middle range"},
+		{"valid_port_low", "80", "80", "Valid low port number"},
+		{"valid_port_high", "65000", "65000", "Valid high port number"},
+		{"port_minimum", "1", "1", "Minimum valid port"},
+		{"port_maximum", "65535", "65535", "Maximum valid port"},
+		{"port_zero", "0", "8080", "Port zero should return default"},
+		{"port_negative", "-1", "8080", "Negative port should return default"},
+		{"port_negative_large", "-9999", "8080", "Large negative port should return default"},
+		{"port_too_high", "65536", "8080", "Port above range should return default"},
+		{"port_way_too_high", "70000", "8080", "Port way above range should return default"},
+		{"invalid_string", "invalid", "8080", "Invalid string should return default"},
+		{"mixed_string", "80abc", "8080", "Mixed string should return default"},
+		{"float_string", "80.5", "8080", "Float string should return default"},
+		{"empty_space", " ", "8080", "Space should return default"},
+		{"multiple_numbers", "80 90", "8080", "Multiple numbers should return default"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := setupPort(tt.input)
+			if result != tt.expected {
+				t.Errorf("setupPort(%q) = %q, expected %q. %s", tt.input, result, tt.expected, tt.description)
+			}
+		})
+	}
 }

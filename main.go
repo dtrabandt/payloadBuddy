@@ -61,20 +61,20 @@ func setupPort(desiredPort string) string {
 // verifyScenarioFile validates a scenario file against the JSON schema
 func verifyScenarioFile(filePath string) {
 	fmt.Printf("Validating scenario file: %s\n", filePath)
-	
+
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		fmt.Printf("❌ Error: File does not exist: %s\n", filePath)
 		os.Exit(1)
 	}
-	
+
 	// Read the file
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("❌ Error reading file: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Create validator and validate
 	validator := NewScenarioValidator()
 	scenario, err := validator.ValidateJSON(content)
@@ -82,7 +82,7 @@ func verifyScenarioFile(filePath string) {
 		fmt.Printf("❌ Validation failed:\n%v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Success - show scenario details
 	fmt.Printf("✅ Validation successful!\n\n")
 	fmt.Printf("📋 Scenario Details:\n")
@@ -120,7 +120,7 @@ func verifyScenarioFile(filePath string) {
 			fmt.Printf("   Tags: %v\n", scenario.Metadata.Tags)
 		}
 	}
-	
+
 	fmt.Printf("\n🎯 Usage: Use this scenario with ?scenario=%s\n", scenario.ScenarioType)
 	fmt.Printf("💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available\n")
 }
