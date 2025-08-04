@@ -7,7 +7,18 @@ import (
 	"testing"
 )
 
-// buildTestBinary builds the test binary once and returns the path
+// Expected output constants for consistent testing
+const (
+	ExpectedUsageText    = "Usage of"
+	ExpectedPortText     = "-port"
+	ExpectedVerifyText   = "-verify"
+	ExpectedAuthText     = "-auth"
+	ExpectedValidateText = "Validating scenario file:"
+	ExpectedErrorText    = "❌ Error: File does not exist:"
+	ExpectedHTTPText     = "on http://localhost:8080"
+)
+
+// Helper function to build test binary - shared across integration tests
 func buildTestBinary(t *testing.T) string {
 	tempDir := t.TempDir()
 	testBinary := filepath.Join(tempDir, "payloadBuddy-test")
@@ -16,6 +27,22 @@ func buildTestBinary(t *testing.T) string {
 		t.Fatalf("Failed to build test binary: %v", err)
 	}
 	return testBinary
+}
+
+// Helper function to run command and get output
+func runCommandWithOutput(binary string, args ...string) (string, error) {
+	cmd := exec.Command(binary, args...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
+// Helper function to check if output contains all expected strings
+func checkOutputContains(t *testing.T, output string, expected []string, testName string) {
+	for _, expectedStr := range expected {
+		if !strings.Contains(output, expectedStr) {
+			t.Errorf("%s: Expected output to contain %q, but it was missing from:\n%s", testName, expectedStr, output)
+		}
+	}
 }
 
 func TestMain_StartupOutput(t *testing.T) {
@@ -31,64 +58,51 @@ func TestMain_StartupOutput(t *testing.T) {
 		expected []string
 	}{
 		{
-			name: "default_startup_output",
-			args: []string{"-verify", "nonexistent.json"}, // Use verify with nonexistent file to get quick output
+			name: "verify_nonexistent_file",
+			args: []string{"-verify", "nonexistent.json"},
 			expected: []string{
-				"Validating scenario file: nonexistent.json",
-				"❌ Error: File does not exist:",
+				ExpectedValidateText + " nonexistent.json",
+				ExpectedErrorText,
 			},
 		},
 		{
-			name: "authentication_help_output",
-			args: []string{"-h"}, // Use help flag for quick output
+			name: "help_flag_output",
+			args: []string{"-h"},
 			expected: []string{
-				"Usage of",
-				"-auth",
-				"-port",
-				"-verify",
+				ExpectedUsageText,
+				ExpectedAuthText,
+				ExpectedPortText,
+				ExpectedVerifyText,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(testBinary, tt.args...)
-
-			// These commands will exit quickly with error codes, but we get the output
-			output, _ := cmd.CombinedOutput()
-			outputStr := string(output)
-
-			// Check for expected strings in output
-			for _, expected := range tt.expected {
-				if !strings.Contains(outputStr, expected) {
-					t.Errorf("Expected output to contain %q, but it was missing from output:\n%s", expected, outputStr)
-				}
-			}
+			output, _ := runCommandWithOutput(testBinary, tt.args...)
+			checkOutputContains(t, output, tt.expected, tt.name)
 		})
 	}
 }
 
-func TestMain_VersionDisplay(t *testing.T) {
+func TestMain_HelpOutput(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	testBinary := buildTestBinary(t)
 
-	// Test version display using -verify with nonexistent file (quick failure)
-	cmd := exec.Command(testBinary, "-verify", "nonexistent.json")
-	output, _ := cmd.CombinedOutput()
-	outputStr := string(output)
+	output, _ := runCommandWithOutput(testBinary, "-h")
 
-	// The verify command doesn't show version, so test help instead
-	cmd = exec.Command(testBinary, "-h")
-	output, _ = cmd.CombinedOutput()
-	outputStr = string(output)
-
-	// Help should show the usage information
-	if !strings.Contains(outputStr, "Usage of") {
-		t.Errorf("Expected help output to contain usage information, but got:\n%s", outputStr)
+	// Help should show the usage information and all flags
+	expectedInHelp := []string{
+		ExpectedUsageText,
+		ExpectedAuthText,
+		ExpectedPortText,
+		ExpectedVerifyText,
 	}
+
+	checkOutputContains(t, output, expectedInHelp, "help_output")
 }
 
 func TestMain_PortHandling(t *testing.T) {
@@ -102,53 +116,89 @@ func TestMain_PortHandling(t *testing.T) {
 		name         string
 		portArg      string
 		expectedPort string
+		description  string
 	}{
 		{
 			name:         "invalid_port_fallback",
 			portArg:      "-port=invalid",
-			expectedPort: "on http://localhost:8080", // Should fallback to default
+			expectedPort: ExpectedHTTPText,
+			description:  "Invalid port should fallback to default 8080",
 		},
 		{
 			name:         "out_of_range_port_fallback",
 			portArg:      "-port=70000",
-			expectedPort: "on http://localhost:8080", // Should fallback to default
+			expectedPort: ExpectedHTTPText,
+			description:  "Out of range port should fallback to default 8080",
 		},
 		{
 			name:         "negative_port_fallback",
 			portArg:      "-port=-1",
-			expectedPort: "on http://localhost:8080", // Should fallback to default
+			expectedPort: ExpectedHTTPText,
+			description:  "Negative port should fallback to default 8080",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// These will try to start the server but fail quickly due to port conflicts or invalid ports
-			cmd := exec.Command(testBinary, tt.portArg)
+			// These will try to start the server but fail quickly due to port conflicts
+			output, _ := runCommandWithOutput(testBinary, tt.portArg)
 
-			output, _ := cmd.CombinedOutput()
-			outputStr := string(output)
-
-			if !strings.Contains(outputStr, tt.expectedPort) {
-				t.Errorf("Expected output to contain %q, but got:\n%s", tt.expectedPort, outputStr)
+			if !strings.Contains(output, tt.expectedPort) {
+				t.Errorf("%s: Expected output to contain %q, but got:\n%s", tt.description, tt.expectedPort, output)
 			}
 		})
 	}
 }
 
-func TestMain_FlagParsing(t *testing.T) {
+func TestMain_ComprehensiveIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	testBinary := buildTestBinary(t)
 
-	// Test help flag
-	cmd := exec.Command(testBinary, "-h")
-	output, _ := cmd.CombinedOutput()
-	outputStr := string(output)
+	// Comprehensive integration test covering multiple scenarios
+	tests := []struct {
+		name        string
+		args        []string
+		expected    []string
+		description string
+	}{
+		{
+			name: "flag_parsing_help",
+			args: []string{"-h"},
+			expected: []string{
+				ExpectedUsageText,
+				ExpectedPortText,
+				ExpectedVerifyText,
+				ExpectedAuthText,
+			},
+			description: "Help flag should show all available flags and usage",
+		},
+		{
+			name: "verify_integration",
+			args: []string{"-verify", "missing.json"},
+			expected: []string{
+				ExpectedValidateText,
+				ExpectedErrorText,
+				"missing.json",
+			},
+			description: "Verify flag should validate scenario files and show errors",
+		},
+		{
+			name: "port_validation",
+			args: []string{"-port=abc123"},
+			expected: []string{
+				ExpectedHTTPText, // Should fallback to 8080
+			},
+			description: "Invalid ports should fallback to default 8080",
+		},
+	}
 
-	// Should show usage information or flag help
-	if !strings.Contains(outputStr, "Usage") && !strings.Contains(outputStr, "flag") && !strings.Contains(outputStr, "-port") {
-		t.Logf("Help output (this is informational): %s", outputStr)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, _ := runCommandWithOutput(testBinary, tt.args...)
+			checkOutputContains(t, output, tt.expected, tt.description)
+		})
 	}
 }

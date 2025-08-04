@@ -9,12 +9,9 @@ import (
 	"testing"
 )
 
-func TestVerifyScenarioFile(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir := t.TempDir()
-
-	// Test case 1: Valid scenario file
-	validScenario := `{
+// Test scenario templates for reuse
+var (
+	validScenarioTemplate = `{
 		"schema_version": "1.0.0",
 		"scenario_name": "Test Scenario",
 		"scenario_type": "custom",
@@ -24,37 +21,68 @@ func TestVerifyScenarioFile(t *testing.T) {
 		"description": "A test scenario for validation"
 	}`
 
-	validFile := filepath.Join(tempDir, "valid.json")
-	err := os.WriteFile(validFile, []byte(validScenario), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create valid test file: %v", err)
-	}
-
-	// Test case 2: Invalid scenario file (missing required field)
-	invalidScenario := `{
+	invalidScenarioTemplate = `{
 		"schema_version": "1.0.0",
 		"scenario_type": "custom",
 		"base_delay": "100ms"
 	}`
 
-	invalidFile := filepath.Join(tempDir, "invalid.json")
-	err = os.WriteFile(invalidFile, []byte(invalidScenario), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create invalid test file: %v", err)
-	}
-
-	// Test case 3: Malformed JSON
-	malformedJSON := `{
+	malformedJSONTemplate = `{
 		"schema_version": "1.0.0",
 		"scenario_name": "Test"
 		"scenario_type": "custom"
 	}`
 
-	malformedFile := filepath.Join(tempDir, "malformed.json")
-	err = os.WriteFile(malformedFile, []byte(malformedJSON), 0644)
+	comprehensiveScenarioTemplate = `{
+		"schema_version": "1.0.0",
+		"scenario_name": "Comprehensive Test Scenario",
+		"description": "A comprehensive test scenario with all fields",
+		"scenario_type": "custom",
+		"base_delay": "150ms",
+		"delay_strategy": "progressive",
+		"servicenow_mode": true,
+		"batch_size": 25,
+		"response_limits": {
+			"max_count": 5000,
+			"default_count": 500
+		},
+		"metadata": {
+			"author": "Test Author",
+			"version": "1.2.3",
+			"tags": ["test", "comprehensive", "validation"]
+		}
+	}`
+)
+
+// Helper function to create test files
+func createTestFile(t *testing.T, dir, filename, content string) string {
+	filePath := filepath.Join(dir, filename)
+	err := os.WriteFile(filePath, []byte(content), 0644)
 	if err != nil {
-		t.Fatalf("Failed to create malformed test file: %v", err)
+		t.Fatalf("Failed to create test file %s: %v", filename, err)
 	}
+	return filePath
+}
+
+// Helper function to build test binary (duplicated from main_integration_test.go)
+func buildVerifyTestBinary(t *testing.T) string {
+	tempDir := t.TempDir()
+	testBinary := filepath.Join(tempDir, "payloadBuddy-verify-test")
+	cmd := exec.Command("go", "build", "-o", testBinary, ".")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to build test binary: %v", err)
+	}
+	return testBinary
+}
+
+func TestVerifyScenarioFile_ValidationLogic(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir := t.TempDir()
+
+	// Create test files using helper function
+	validFile := createTestFile(t, tempDir, "valid.json", validScenarioTemplate)
+	invalidFile := createTestFile(t, tempDir, "invalid.json", invalidScenarioTemplate) 
+	malformedFile := createTestFile(t, tempDir, "malformed.json", malformedJSONTemplate)
 
 	tests := []struct {
 		name        string
@@ -153,42 +181,12 @@ func TestVerifyScenarioFile_Integration(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
 
-	// Test case 1: Valid scenario file
-	validScenario := `{
-		"schema_version": "1.0.0",
-		"scenario_name": "Test Scenario",
-		"scenario_type": "custom",
-		"base_delay": "100ms",
-		"delay_strategy": "fixed",
-		"servicenow_mode": true,
-		"description": "A test scenario for validation"
-	}`
-
-	validFile := filepath.Join(tempDir, "valid.json")
-	err := os.WriteFile(validFile, []byte(validScenario), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create valid test file: %v", err)
-	}
-
-	// Test case 2: Invalid scenario file (missing required field)
-	invalidScenario := `{
-		"schema_version": "1.0.0",
-		"scenario_type": "custom",
-		"base_delay": "100ms"
-	}`
-
-	invalidFile := filepath.Join(tempDir, "invalid.json")
-	err = os.WriteFile(invalidFile, []byte(invalidScenario), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create invalid test file: %v", err)
-	}
+	// Create test files using helper function and templates
+	validFile := createTestFile(t, tempDir, "valid.json", validScenarioTemplate)
+	invalidFile := createTestFile(t, tempDir, "invalid.json", invalidScenarioTemplate)
 
 	// Build the test binary to use for subprocess testing
-	testBinary := filepath.Join(tempDir, "payloadBuddy-test")
-	cmd := exec.Command("go", "build", "-o", testBinary, ".")
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to build test binary: %v", err)
-	}
+	testBinary := buildVerifyTestBinary(t)
 
 	tests := []struct {
 		name             string
@@ -261,41 +259,14 @@ func TestVerifyScenarioFile_OutputFormat(t *testing.T) {
 	// Create a comprehensive test scenario to verify all output fields
 	tempDir := t.TempDir()
 
-	comprehensiveScenario := `{
-		"schema_version": "1.0.0",
-		"scenario_name": "Comprehensive Test Scenario",
-		"description": "A comprehensive test scenario with all fields",
-		"scenario_type": "custom",
-		"base_delay": "150ms",
-		"delay_strategy": "progressive",
-		"servicenow_mode": true,
-		"batch_size": 25,
-		"response_limits": {
-			"max_count": 5000,
-			"default_count": 500
-		},
-		"metadata": {
-			"author": "Test Author",
-			"version": "1.2.3",
-			"tags": ["test", "comprehensive", "validation"]
-		}
-	}`
-
-	testFile := filepath.Join(tempDir, "comprehensive.json")
-	err := os.WriteFile(testFile, []byte(comprehensiveScenario), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
+	// Create test file using helper function and template
+	testFile := createTestFile(t, tempDir, "comprehensive.json", comprehensiveScenarioTemplate)
 
 	// Build test binary
-	testBinary := filepath.Join(tempDir, "payloadBuddy-test")
-	cmd := exec.Command("go", "build", "-o", testBinary, ".")
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to build test binary: %v", err)
-	}
+	testBinary := buildVerifyTestBinary(t)
 
 	// Run verification
-	cmd = exec.Command(testBinary, "-verify", testFile)
+	cmd := exec.Command(testBinary, "-verify", testFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Verification command failed: %v. Output: %s", err, string(output))
@@ -335,11 +306,19 @@ func TestValidScenarioExamples(t *testing.T) {
 	// Test validation of the built-in scenario examples
 	validator := NewScenarioValidator()
 
-	// Example scenarios that should be valid
+	// Use templates and add additional examples
 	examples := []struct {
 		name     string
 		scenario string
 	}{
+		{
+			name:     "Valid scenario template",
+			scenario: validScenarioTemplate,
+		},
+		{
+			name:     "Comprehensive scenario template", 
+			scenario: comprehensiveScenarioTemplate,
+		},
 		{
 			name: "Minimal custom scenario",
 			scenario: `{
@@ -347,35 +326,6 @@ func TestValidScenarioExamples(t *testing.T) {
 				"scenario_name": "Minimal Test",
 				"scenario_type": "custom",
 				"base_delay": "50ms"
-			}`,
-		},
-		{
-			name: "Full featured scenario",
-			scenario: `{
-				"schema_version": "1.0.0",
-				"scenario_name": "Full Featured Test",
-				"description": "A comprehensive test scenario",
-				"scenario_type": "custom",
-				"base_delay": "100ms",
-				"delay_strategy": "progressive",
-				"servicenow_mode": true,
-				"batch_size": 50,
-				"response_limits": {
-					"max_count": 10000,
-					"default_count": 1000
-				},
-				"servicenow_config": {
-					"record_types": ["incident"],
-					"state_rotation": ["New", "In Progress", "Closed"],
-					"number_format": "INC%07d",
-					"sys_id_format": "standard"
-				},
-				"metadata": {
-					"author": "Test Author",
-					"created_date": "2025-01-15",
-					"version": "1.0.0",
-					"tags": ["test", "example"]
-				}
 			}`,
 		},
 	}

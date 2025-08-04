@@ -125,6 +125,104 @@ func verifyScenarioFile(filePath string) {
 	fmt.Printf("💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available\n")
 }
 
+// registerPluginsAndStart registers all plugins and prints startup information
+func registerPluginsAndStart() string {
+	// Register plugins with conditional authentication middleware
+	for _, p := range plugins {
+		path := p.Path()
+		// Exclude documentation endpoints from authentication for better UX
+		if path == "/swagger" || path == "/openapi.json" {
+			http.HandleFunc(path, p.Handler())
+			fmt.Printf("Registered endpoint: %s (no auth)\n", path)
+		} else {
+			http.HandleFunc(path, basicAuthMiddleware(p.Handler()))
+			fmt.Printf("Registered endpoint: %s\n", path)
+		}
+	}
+
+	port := setupPort(*paramPort)
+	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
+
+	// Print authentication info if enabled
+	printAuthenticationInfo()
+
+	// Print usage examples
+	printUsageExamples(port)
+
+	return port
+}
+
+// printUsageExamples prints all the usage examples and scenarios
+func printUsageExamples(port string) {
+	fmt.Println("\nAvailable endpoints:")
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/openapi.json", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/swagger", port)))
+
+	fmt.Println("\nRest Payload examples:")
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload?count=5000", port)))
+
+	fmt.Println("\nStreaming examples:")
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?delay=50ms&strategy=random&batch_size=50", port)))
+
+	printServiceNowScenarios()
+}
+
+// printServiceNowScenarios prints all available ServiceNow scenarios including custom ones
+func printServiceNowScenarios() {
+	fmt.Println("\nServiceNow test scenarios:")
+	
+	// Get all scenario types from the scenario manager
+	scenarioTypes := scenarioManager.ListScenarios()
+	
+	for _, scenarioType := range scenarioTypes {
+		scenario := scenarioManager.GetScenario(scenarioType)
+		if scenario != nil && scenario.Description != "" {
+			fmt.Printf("  - %s: %s\n", scenarioType, scenario.Description)
+		} else {
+			// Fallback descriptions for scenarios without description
+			switch scenarioType {
+			case "peak_hours":
+				fmt.Printf("  - %s: Simulates ServiceNow during peak hours\n", scenarioType)
+			case "maintenance":
+				fmt.Printf("  - %s: Simulates maintenance windows with spikes\n", scenarioType)
+			case "network_issues":
+				fmt.Printf("  - %s: Random network delays\n", scenarioType)
+			case "database_load":
+				fmt.Printf("  - %s: Progressive database load simulation\n", scenarioType)
+			default:
+				fmt.Printf("  - %s: Custom scenario\n", scenarioType)
+			}
+		}
+	}
+}
+
+// startHTTPServer starts the HTTP server with proper configuration
+func startHTTPServer(port string) {
+	addr := ":" + port
+	
+	fmt.Println("\nPress Ctrl+C to stop the server")
+
+	// Start the HTTP server with proper timeouts to prevent resource exhaustion
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      nil, // Use DefaultServeMux
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		// Print error to stderr and exit with non-zero code.
+		fmt.Fprintf(os.Stderr, "Server failed to start: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 // main is the entry point for the payloadBuddy application.
 // It starts an HTTP server on port 8080 and registers all plugin endpoints.
 // The server returns large JSON payloads for testing REST client implementations.
@@ -144,64 +242,9 @@ func main() {
 	// Setup authentication if enabled
 	setupAuthentication()
 
-	// Register plugins with conditional authentication middleware
-	for _, p := range plugins {
-		path := p.Path()
-		// Exclude documentation endpoints from authentication for better UX
-		if path == "/swagger" || path == "/openapi.json" {
-			http.HandleFunc(path, p.Handler())
-			fmt.Printf("Registered endpoint: %s (no auth)\n", path)
-		} else {
-			http.HandleFunc(path, basicAuthMiddleware(p.Handler()))
-			fmt.Printf("Registered endpoint: %s\n", path)
-		}
-	}
-
-	port := setupPort(*paramPort)
-	addr := ":" + port
-
-	fmt.Printf("\nStarting payloadBuddy %s on http://localhost:%s\n", Version, port)
-
-	// Print authentication info if enabled
-	printAuthenticationInfo()
-
-	fmt.Println("\nAvailable endpoints:")
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/openapi.json", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/swagger", port)))
-
-	fmt.Println("\nRest Payload examples:")
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload?count=5000", port)))
-
-	fmt.Println("\nStreaming examples:")
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?scenario=peak_hours&servicenow=true", port)))
-	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?delay=50ms&strategy=random&batch_size=50", port)))
-
-	fmt.Println("\nServiceNow test scenarios:")
-	fmt.Printf("  - peak_hours: Simulates ServiceNow during peak hours\n")
-	fmt.Printf("  - maintenance: Simulates maintenance windows with spikes\n")
-	fmt.Printf("  - network_issues: Random network delays\n")
-	fmt.Printf("  - database_load: Progressive database load simulation\n")
-
-	fmt.Println("\nPress Ctrl+C to stop the server")
-
-	// Start the HTTP server with proper timeouts to prevent resource exhaustion
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      nil, // Use DefaultServeMux
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  120 * time.Second,
-	}
-
-	if err := server.ListenAndServe(); err != nil {
-		// Print error to stderr and exit with non-zero code.
-		fmt.Fprintf(os.Stderr, "Server failed to start: %v\n", err)
-		os.Exit(1)
-	}
+	// Register plugins and start server
+	port := registerPluginsAndStart()
+	startHTTPServer(port)
 }
 
 // RestPayloadPlugin implements PayloadPlugin for large JSON payloads
