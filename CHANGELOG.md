@@ -9,9 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Paginated Payload Endpoint (`/paginated_payload`)**:
+  - Complete pagination support for ServiceNow Data Stream actions
+  - Multiple pagination patterns: limit/offset, page/size, and cursor-based
+  - ServiceNow-compatible field formats (sys_id, number, state)
+  - Configurable delays to simulate API performance scenarios
+  - Comprehensive pagination metadata (has_more, next_offset, total_count)
+  - Support for up to 1M total records with configurable page sizes
+  - Full OpenAPI 3.1.1 specification with detailed parameter documentation
+  - Extensive test coverage (100+ test cases) including boundary conditions
+
+- **ServiceNow Data Stream Integration**:
+  - Realistic ServiceNow record structures with proper field naming
+  - Incident number generation (INC0000001, etc.)
+  - ServiceNow state simulation (New, In Progress, Resolved, Closed)
+  - Proper sys_id format generation for ServiceNow compatibility
+  - Optimized for ServiceNow Flow Designer integration
+
 ### Changed
 
+- **Code Modernization**:
+  - Updated to use modern Go idioms (min function, range over int)
+  - Refactored large OpenAPI specification functions into focused, maintainable components
+  - Improved code organization following clean code principles
+  - Enhanced readability with better function decomposition
+
+- **Documentation Updates**:
+  - Updated README.md with comprehensive ServiceNow Data Stream examples
+  - Enhanced docs/index.md with pagination setup guides and use cases
+  - Expanded DEPLOYMENT.md with Docker and ngrok deployment strategies
+  - Updated CONTRIBUTING.md with detailed TDD workflow and project structure
+  - Added startup messages with pagination endpoint examples
+
 ### Fixed
+
+- **Go Language Compliance**: Applied modern Go patterns and resolved linting suggestions
+- **Code Quality**: Improved maintainability through function decomposition and cleaner architecture
 
 ## [v0.2.5] - 2025-08-03
 
