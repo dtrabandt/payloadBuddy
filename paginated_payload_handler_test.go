@@ -440,3 +440,83 @@ func BenchmarkPaginatedPayloadHandlerServiceNow(b *testing.B) {
 		PaginatedPayloadHandler(w, req)
 	}
 }
+
+func TestPaginatedPayloadHandlerAuthentication(t *testing.T) {
+	// Save original auth state
+	originalAuth := *enableAuth
+	originalUsername := authUsername
+	originalPassword := authPassword
+	defer func() {
+		*enableAuth = originalAuth
+		authUsername = originalUsername
+		authPassword = originalPassword
+	}()
+
+	// Enable auth for testing
+	*enableAuth = true
+	authUsername = "testuser"
+	authPassword = "testpass"
+
+	tests := []struct {
+		name           string
+		useAuth        bool
+		expectedStatus int
+		description    string
+	}{
+		{
+			name:           "Without authentication should return 401",
+			useAuth:        false,
+			expectedStatus: http.StatusUnauthorized,
+			description:    "Paginated endpoint should require authentication when auth is enabled",
+		},
+		{
+			name:           "With correct authentication should return 200",
+			useAuth:        true,
+			expectedStatus: http.StatusOK,
+			description:    "Paginated endpoint should work with correct authentication",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/paginated_payload?limit=10", nil)
+
+			// Add authentication if required
+			if tt.useAuth {
+				req.SetBasicAuth(authUsername, authPassword)
+			}
+
+			w := httptest.NewRecorder()
+
+			// Use middleware wrapper for authentication testing
+			handler := basicAuthMiddleware(PaginatedPayloadHandler)
+			handler.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("%s: expected status %d, got %d", tt.description, tt.expectedStatus, w.Code)
+			}
+
+			// Additional checks for successful authentication
+			if tt.useAuth && w.Code == http.StatusOK {
+				contentType := w.Header().Get("Content-Type")
+				if contentType != "application/json" {
+					t.Errorf("Expected content-type application/json, got %s", contentType)
+				}
+
+				// Verify it's valid JSON response
+				var response PaginatedResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Errorf("Failed to parse JSON response: %v", err)
+				}
+
+				if len(response.Result) != 10 {
+					t.Errorf("Expected 10 items in result, got %d", len(response.Result))
+				}
+
+				if response.Metadata.TotalCount == 0 {
+					t.Error("Expected non-zero total count in metadata")
+				}
+			}
+		})
+	}
+}
