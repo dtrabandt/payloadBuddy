@@ -88,12 +88,17 @@ func main() {
 	fmt.Println("\nAvailable endpoints:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/openapi.json", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/swagger", port)))
 
 	fmt.Println("\nRest Payload examples:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/rest_payload?count=5000", port)))
+
+	fmt.Println("\nPagination examples (ServiceNow Data Stream compatible):")
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload?limit=100&offset=0&servicenow=true", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload?page=2&size=50&servicenow=true", port)))
 
 	fmt.Println("\nStreaming examples:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))

@@ -230,6 +230,7 @@ All checks must pass before merging:
 ├── openapi.go                       # OpenAPI 3.1.1 data structures
 ├── rest_payload_handler.go          # Large single-response endpoint
 ├── streaming_payload_handler.go     # Advanced streaming endpoint
+├── paginated_payload_handler.go     # Paginated REST endpoint (ServiceNow Data Stream)
 ├── documentation_handler.go         # OpenAPI spec and Swagger UI
 ├── *_test.go                        # Comprehensive test suite
 ├── .github/workflows/               # CI/CD pipeline
@@ -267,6 +268,7 @@ We welcome contributions in these areas:
 
 ### Features
 - Additional ServiceNow scenarios and delay patterns
+- Enhanced pagination patterns (GraphQL cursor, HAL pagination)
 - Performance optimizations and monitoring
 - Additional output formats (XML, CSV, etc.)
 - New authentication methods (JWT, OAuth)
