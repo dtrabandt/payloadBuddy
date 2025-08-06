@@ -38,6 +38,15 @@ This server helps consultants and developers:
 - **Context-Aware**: Handles client cancellation gracefully
 - **Real-time Streaming**: Chunked transfer encoding with configurable flush intervals
 
+### **Configurable Scenario System**
+- **Dynamic Scenario Loading**: JSON-based scenario configuration with comprehensive schema validation
+- **Embedded Scenarios**: Core scenarios built into the binary for single-executable deployment
+- **User-Defined Scenarios**: Custom scenarios in `$HOME/.config/payloadBuddy/scenarios/` directory
+- **Scenario Override**: User scenarios override embedded scenarios with same `scenario_type`
+- **Automatic Directory Creation**: User scenario directory created automatically on first run
+- **Version Compatibility**: Built-in version compatibility checking framework
+- **Real-time Configuration**: Scenario-based defaults for count, batch_size, and ServiceNow mode
+
 ### **Architecture**
 - **Plugin System**: Easily extend with new payload handlers via `PayloadPlugin` interface
 - **OpenAPI 3.1.1 Integration**: Automatic documentation generation from plugin specifications
@@ -140,6 +149,7 @@ For a complete list of available options, use the built-in help:
 - `-auth`: Enable basic authentication (default: false)
 - `-user=<username>`: Set username (auto-generated if not specified)
 - `-pass=<password>`: Set password (auto-generated if not specified)
+- `-verify=<file>`: Validate a scenario file against the JSON schema and exit
 
 The server listens on the specified port (default: 8080) and provides detailed startup information with example URLs and authentication details.
 
@@ -158,7 +168,7 @@ For production use or external access, see the **[DEPLOYMENT.md](DEPLOYMENT.md)*
 - Load balancing with nginx and horizontal scaling
 - Enterprise-ready with security best practices
 
-### 📋 **What's Included**
+### **What's Included**
 - Step-by-step setup instructions
 - ServiceNow configuration examples (Flow Actions, REST Messages)
 - Security considerations and best practices
@@ -403,27 +413,87 @@ curl "http://localhost:8080/paginated_payload?limit=100&offset=200&servicenow=tr
 
 ### **ServiceNow Testing Scenarios**
 
-#### Peak Hours (`scenario=peak_hours`)
-- Simulates slower response times during peak ServiceNow usage
-- 200ms base delay between items
-- Perfect for testing Flow Action timeouts
+PayloadBuddy includes four built-in scenarios designed to simulate real ServiceNow conditions. **All scenarios work with both streaming (`/stream_payload`) and pagination (`/paginated_payload`) endpoints**, adapting their behavior appropriately for each context:
 
-#### Maintenance Window (`scenario=maintenance`)
-- Simulates maintenance periods with periodic spikes
-- 500ms base delay with 2s spikes every 500 items
-- Tests resilience during ServiceNow maintenance windows
+- **Peak Hours** (`scenario=peak_hours`): 200ms delays simulating peak usage - **ideal for both endpoints**
+- **Maintenance Window** (`scenario=maintenance`): 500ms delays with periodic spikes - **works with both (spikes per item in streaming, per page in pagination)**
+- **Network Issues** (`scenario=network_issues`): Random delays up to 3s - **works with both (random delays simulate real conditions)**
+- **Database Load** (`scenario=database_load`): Progressive performance degradation - **works with both (per item in streaming, per page in pagination)**
 
-#### Network Issues (`scenario=network_issues`)
-- Random network delays and interruptions
-- 10% chance of 0-3 second delays
-- Simulates unstable network conditions
+#### Peak Hours (`scenario=peak_hours`) - **Ideal for Both**
+- **Streaming**: 200ms delay between each item in the stream
+- **Pagination**: 200ms delay before returning each page
+- **Use case**: Testing Flow Actions and clients during peak ServiceNow usage
+- **Examples**: 
+  - `curl "http://localhost:8080/stream_payload?scenario=peak_hours&count=100"`
+  - `curl "http://localhost:8080/paginated_payload?scenario=peak_hours&limit=50"`
 
-#### Database Load (`scenario=database_load`)
-- Progressive performance degradation
-- Delay increases as more items are processed
-- Simulates database performance issues under load
+#### Maintenance Window (`scenario=maintenance`) - **Works with Both**
+- **Streaming**: 500ms base delay with 2s spikes every 500 items processed
+- **Pagination**: Single delay spike applied to each page request
+- **Use case**: Testing resilience during ServiceNow maintenance windows
+- **Examples**:
+  - `curl "http://localhost:8080/stream_payload?scenario=maintenance&count=1000"`
+  - `curl "http://localhost:8080/paginated_payload?scenario=maintenance&page=1&size=100"`
 
-### 🎯 **ServiceNow Field Formats**
+#### Network Issues (`scenario=network_issues`) - **Works with Both**
+- **Streaming**: 10% chance of 0-3 second random delays per item
+- **Pagination**: Random delays applied to each page request
+- **Use case**: Testing unstable network conditions and timeout handling
+- **Examples**:
+  - `curl "http://localhost:8080/stream_payload?scenario=network_issues&count=200"`
+  - `curl "http://localhost:8080/paginated_payload?scenario=network_issues&limit=25"`
+
+#### Database Load (`scenario=database_load`) - **Works with Both**
+- **Streaming**: Progressive delay increase as more items are processed (starts at 25ms, increases by 10ms per 100 items)
+- **Pagination**: Single delay applied per page (calculated based on offset/page position)
+- **Use case**: Simulating database performance degradation under load
+- **Examples**:
+  - `curl "http://localhost:8080/stream_payload?scenario=database_load&count=500"`
+  - `curl "http://localhost:8080/paginated_payload?scenario=database_load&limit=100&offset=200"`
+
+### Custom Scenario Configuration
+
+PayloadBuddy supports user-defined scenarios through JSON configuration files with comprehensive schema validation, automatic loading, and override capabilities.
+
+> **Complete Scenario Guide**: For detailed information about creating custom scenarios, JSON schema reference, advanced features, and troubleshooting, see **[SCENARIOS.md](SCENARIOS.md)**.
+
+#### Quick Example
+
+Create `$HOME/.config/payloadBuddy/scenarios/my-test.json`:
+
+```json
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "Quick Test",
+    "scenario_type": "custom",
+    "base_delay": "100ms",
+    "delay_strategy": "progressive",
+    "servicenow_mode": true,
+    "batch_size": 50
+}
+```
+
+**Validation:**
+```sh
+# Validate your scenario file before deploying
+./payloadBuddy -verify $HOME/.config/payloadBuddy/scenarios/my-test.json
+```
+
+**Usage:**
+```sh
+curl -u username:password "http://localhost:8080/stream_payload?scenario=custom"
+```
+
+### Key Features
+
+- **Dynamic Loading**: Scenarios loaded from `$HOME/.config/payloadBuddy/scenarios/`
+- **Override Support**: User scenarios override built-in scenarios
+- **Schema Validation**: Comprehensive JSON schema validation
+- **Embedded Scenarios**: Core scenarios built into binary
+- **Advanced Configuration**: Error injection, performance monitoring, custom timing patterns
+
+### **ServiceNow Field Formats**
 When `servicenow=true` is enabled, responses include realistic ServiceNow fields:
 
 ```json
@@ -462,6 +532,11 @@ For detailed development guidelines, plugin creation, and contribution workflow,
 ├── *_payload_handler.go             # Endpoint implementations
 ├── auth.go                          # Authentication middleware
 ├── documentation_handler.go         # OpenAPI spec and Swagger UI
+├── scenario_manager.go              # Dynamic scenario loading and management
+├── scenario_validator.go            # JSON schema validation for scenarios
+├── scenarios/                       # Embedded scenario JSON files and schema
+│   ├── *.json                       # Built-in scenario configurations
+│   └── scenario_schema_v1.0.0.json  # JSON schema for validation
 ├── *_test.go                        # Comprehensive test suite
 ├── .github/workflows/               # CI/CD automation
 ├── README.md                        # User documentation

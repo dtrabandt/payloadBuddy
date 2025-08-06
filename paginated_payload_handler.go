@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -39,14 +40,15 @@ type PaginatedResponse struct {
 // PaginatedPayloadHandler handles paginated REST API responses
 //
 // Query Parameters:
-//   - total: Total number of items available (default: 10000)
-//   - limit: Number of items per page for limit/offset pagination (default: 100)
+//   - total: Total number of items available (default: 10000, scenario-configurable)
+//   - limit: Number of items per page for limit/offset pagination (default: 100, scenario-configurable)
 //   - offset: Starting position for limit/offset pagination (default: 0)
 //   - page: Page number for page/size pagination (default: 1)
-//   - size: Items per page for page/size pagination (default: 100)
+//   - size: Items per page for page/size pagination (default: 100, scenario-configurable)
 //   - cursor: Cursor token for cursor-based pagination
-//   - servicenow: Generate ServiceNow-style fields (default: false)
+//   - servicenow: Generate ServiceNow-style fields (default: false, scenario-configurable)
 //   - delay: Delay before response (e.g., "100ms", "1s")
+//   - scenario: ServiceNow scenarios ("peak_hours", "maintenance", "network_issues", "database_load")
 //
 // Pagination Types:
 //   - Limit/Offset: Use 'limit' and 'offset' parameters
@@ -57,25 +59,56 @@ type PaginatedResponse struct {
 //   - /paginated_payload?limit=50&offset=100
 //   - /paginated_payload?page=2&size=25&servicenow=true
 //   - /paginated_payload?cursor=eyJpZCI6MTAwfQ%3D%3D
+//   - /paginated_payload?scenario=peak_hours&servicenow=true
+//   - /paginated_payload?scenario=database_load&limit=25
 func PaginatedPayloadHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse parameters
-	totalCount := getIntParam(r, "total", 10000)
-	limit := getIntParam(r, "limit", 100)
+	// Parse scenario parameter
+	scenario := strings.ToLower(r.URL.Query().Get("scenario"))
+
+	// Get scenario-based defaults if scenario manager is available and scenario is specified
+	var defaultCount, maxCount, defaultBatchSize int
+	var defaultServiceNowMode bool
+	if scenarioManager != nil && scenario != "" {
+		defaultBatchSize, defaultServiceNowMode, maxCount, defaultCount = scenarioManager.GetScenarioConfig(scenario)
+	} else {
+		// Use hardcoded defaults for backward compatibility
+		defaultCount = 10000
+		maxCount = 1000000
+		defaultBatchSize = 100
+		defaultServiceNowMode = false
+	}
+
+	// Parse parameters with scenario-aware defaults
+	totalCount := getIntParam(r, "total", defaultCount)
+	limit := getIntParam(r, "limit", defaultBatchSize)
 	offset := getIntParam(r, "offset", 0)
 	page := getIntParam(r, "page", 1)
-	size := getIntParam(r, "size", 100)
+	size := getIntParam(r, "size", defaultBatchSize)
 	cursor := r.URL.Query().Get("cursor")
-	serviceNowMode := r.URL.Query().Get("servicenow") == "true"
+	
+	// ServiceNow mode: use scenario default unless explicitly overridden
+	serviceNowMode := defaultServiceNowMode
+	if serviceNowParam := r.URL.Query().Get("servicenow"); serviceNowParam != "" {
+		serviceNowMode = serviceNowParam == "true"
+	}
+	
 	delay := getDurationParam(r, "delay", 0)
 
 	// Validate parameters
-	if totalCount <= 0 || totalCount > 1000000 {
-		http.Error(w, "Total count must be between 1 and 1,000,000", http.StatusBadRequest)
+	if totalCount <= 0 || totalCount > maxCount {
+		http.Error(w, fmt.Sprintf("Total count must be between 1 and %d", maxCount), http.StatusBadRequest)
 		return
 	}
 
-	// Apply delay if specified (simulates API processing time)
-	if delay > 0 {
+	// Apply scenario-based delay if specified
+	if scenario != "" && scenarioManager != nil {
+		// For pagination, use item index 0 to get base scenario delay
+		scenarioDelay, _ := scenarioManager.GetScenarioDelay(scenario, 0)
+		if scenarioDelay > 0 {
+			time.Sleep(scenarioDelay)
+		}
+	} else if delay > 0 {
+		// Apply custom delay if specified (simulates API processing time)
 		time.Sleep(delay)
 	}
 
@@ -298,344 +331,355 @@ func (p PaginatedPayloadPlugin) buildOpenAPIOperation() OpenAPIPath {
 // buildOpenAPIParameters creates the parameter specifications
 func (p PaginatedPayloadPlugin) buildOpenAPIParameters() []OpenAPIParameter {
 	return []OpenAPIParameter{
-					{
-						Name:        "total",
-						In:          "query",
-						Description: "Total number of items available across all pages (default: 10000, max: 1000000)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "integer",
-							Minimum: &[]int{1}[0],
-							Maximum: &[]int{1000000}[0],
-							Example: 10000,
-						},
-					},
-					{
-						Name:        "limit",
-						In:          "query",
-						Description: "Number of items per page for limit/offset pagination (default: 100, max: 1000)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "integer",
-							Minimum: &[]int{1}[0],
-							Maximum: &[]int{1000}[0],
-							Example: 100,
-						},
-					},
-					{
-						Name:        "offset",
-						In:          "query",
-						Description: "Starting position for limit/offset pagination (default: 0)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "integer",
-							Minimum: &[]int{0}[0],
-							Example: 0,
-						},
-					},
-					{
-						Name:        "page",
-						In:          "query",
-						Description: "Page number for page/size pagination (default: 1)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "integer",
-							Minimum: &[]int{1}[0],
-							Example: 1,
-						},
-					},
-					{
-						Name:        "size",
-						In:          "query",
-						Description: "Items per page for page/size pagination (default: 100, max: 1000)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "integer",
-							Minimum: &[]int{1}[0],
-							Maximum: &[]int{1000}[0],
-							Example: 100,
-						},
-					},
-					{
-						Name:        "cursor",
-						In:          "query",
-						Description: "Cursor token for cursor-based pagination",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "string",
-							Example: "eyJpZCI6MTAwfQ%3D%3D",
-						},
-					},
-					{
-						Name:        "servicenow",
-						In:          "query",
-						Description: "Enable ServiceNow-style record format with sys_id, number, and state fields",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "boolean",
-							Example: false,
-						},
-					},
-					{
-						Name:        "delay",
-						In:          "query",
-						Description: "Delay before response (e.g., '100ms', '1s', or just milliseconds)",
-						Required:    false,
-						Schema: &OpenAPISchema{
-							Type:    "string",
-							Example: "100ms",
-						},
-					},
+		{
+			Name:        "total",
+			In:          "query",
+			Description: "Total number of items available across all pages (default: 10000, max: 1000000)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "integer",
+				Minimum: &[]int{1}[0],
+				Maximum: &[]int{1000000}[0],
+				Example: 10000,
+			},
+		},
+		{
+			Name:        "limit",
+			In:          "query",
+			Description: "Number of items per page for limit/offset pagination (default: 100, max: 1000)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "integer",
+				Minimum: &[]int{1}[0],
+				Maximum: &[]int{1000}[0],
+				Example: 100,
+			},
+		},
+		{
+			Name:        "offset",
+			In:          "query",
+			Description: "Starting position for limit/offset pagination (default: 0)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "integer",
+				Minimum: &[]int{0}[0],
+				Example: 0,
+			},
+		},
+		{
+			Name:        "page",
+			In:          "query",
+			Description: "Page number for page/size pagination (default: 1)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "integer",
+				Minimum: &[]int{1}[0],
+				Example: 1,
+			},
+		},
+		{
+			Name:        "size",
+			In:          "query",
+			Description: "Items per page for page/size pagination (default: 100, max: 1000)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "integer",
+				Minimum: &[]int{1}[0],
+				Maximum: &[]int{1000}[0],
+				Example: 100,
+			},
+		},
+		{
+			Name:        "cursor",
+			In:          "query",
+			Description: "Cursor token for cursor-based pagination",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "string",
+				Example: "eyJpZCI6MTAwfQ%3D%3D",
+			},
+		},
+		{
+			Name:        "servicenow",
+			In:          "query",
+			Description: "Enable ServiceNow-style record format with sys_id, number, and state fields",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "boolean",
+				Example: false,
+			},
+		},
+		{
+			Name:        "delay",
+			In:          "query",
+			Description: "Delay before response (e.g., '100ms', '1s', or just milliseconds)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type:    "string",
+				Example: "100ms",
+			},
+		},
+		{
+			Name:        "scenario",
+			In:          "query",
+			Description: "ServiceNow simulation scenario. All scenarios work with pagination: 'peak_hours' (consistent delays, ideal for both), 'maintenance' (single spike per page), 'network_issues' (random delays per page), 'database_load' (single delay per page)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type: "string",
+				Enum: []any{"peak_hours", "maintenance", "network_issues", "database_load"},
+				Example: "peak_hours",
+			},
+		},
 	}
 }
 
 // buildOpenAPIResponses creates the response specifications
 func (p PaginatedPayloadPlugin) buildOpenAPIResponses() map[string]OpenAPIResponse {
 	return map[string]OpenAPIResponse{
-					"200": {
-						Description: "Successful paginated response",
-						Content: map[string]OpenAPIMediaType{
-							"application/json": {
-								Schema: &OpenAPISchema{
+		"200": {
+			Description: "Successful paginated response",
+			Content: map[string]OpenAPIMediaType{
+				"application/json": {
+					Schema: &OpenAPISchema{
+						Type: "object",
+						Properties: map[string]*OpenAPISchema{
+							"result": {
+								Type: "array",
+								Items: &OpenAPISchema{
 									Type: "object",
 									Properties: map[string]*OpenAPISchema{
-										"result": {
-											Type: "array",
-											Items: &OpenAPISchema{
-												Type: "object",
-												Properties: map[string]*OpenAPISchema{
-													"id": {
-														Type:        "integer",
-														Description: "Unique identifier for the item",
-														Example:     1,
-													},
-													"value": {
-														Type:        "string",
-														Description: "Value or description of the item",
-														Example:     "Item 1",
-													},
-													"timestamp": {
-														Type:        "string",
-														Format:      "date-time",
-														Description: "Timestamp when the item was generated",
-													},
-													"sys_id": {
-														Type:        "string",
-														Description: "ServiceNow system ID (when ServiceNow mode is enabled)",
-														Example:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-													},
-													"number": {
-														Type:        "string",
-														Description: "ServiceNow ticket number (when ServiceNow mode is enabled)",
-														Example:     "INC0000001",
-													},
-													"state": {
-														Type:        "string",
-														Description: "ServiceNow state (when ServiceNow mode is enabled)",
-														Example:     "New",
-													},
-												},
-												Required: []string{"id", "value", "timestamp"},
-											},
+										"id": {
+											Type:        "integer",
+											Description: "Unique identifier for the item",
+											Example:     1,
 										},
-										"metadata": {
-											Type: "object",
-											Properties: map[string]*OpenAPISchema{
-												"total_count": {
-													Type:        "integer",
-													Description: "Total number of items across all pages",
-													Example:     10000,
-												},
-												"page": {
-													Type:        "integer",
-													Description: "Current page number (page/size pagination)",
-													Example:     1,
-												},
-												"size": {
-													Type:        "integer",
-													Description: "Items per page (page/size pagination)",
-													Example:     100,
-												},
-												"limit": {
-													Type:        "integer",
-													Description: "Items per page (limit/offset pagination)",
-													Example:     100,
-												},
-												"offset": {
-													Type:        "integer",
-													Description: "Starting position (limit/offset pagination)",
-													Example:     0,
-												},
-												"has_more": {
-													Type:        "boolean",
-													Description: "Whether more pages are available",
-													Example:     true,
-												},
-												"next_offset": {
-													Type:        "integer",
-													Description: "Next offset for limit/offset pagination",
-													Example:     100,
-												},
-												"next_page": {
-													Type:        "integer",
-													Description: "Next page number for page/size pagination",
-													Example:     2,
-												},
-												"next_cursor": {
-													Type:        "string",
-													Description: "Next cursor token for cursor-based pagination",
-													Example:     "eyJpZCI6MjAwfQ%3D%3D",
-												},
-											},
-											Required: []string{"total_count", "has_more"},
+										"value": {
+											Type:        "string",
+											Description: "Value or description of the item",
+											Example:     "Item 1",
+										},
+										"timestamp": {
+											Type:        "string",
+											Format:      "date-time",
+											Description: "Timestamp when the item was generated",
+										},
+										"sys_id": {
+											Type:        "string",
+											Description: "ServiceNow system ID (when ServiceNow mode is enabled)",
+											Example:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+										},
+										"number": {
+											Type:        "string",
+											Description: "ServiceNow ticket number (when ServiceNow mode is enabled)",
+											Example:     "INC0000001",
+										},
+										"state": {
+											Type:        "string",
+											Description: "ServiceNow state (when ServiceNow mode is enabled)",
+											Example:     "New",
 										},
 									},
-									Required: []string{"result", "metadata"},
+									Required: []string{"id", "value", "timestamp"},
 								},
-								Example: PaginatedResponse{
-									Result: []PaginatedItem{
-										{
-											ID:        1,
-											Value:     "Item 1",
-											Timestamp: time.Now(),
-										},
-										{
-											ID:        2,
-											Value:     "ServiceNow Record 2",
-											Timestamp: time.Now(),
-											SysID:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-											Number:    "INC0000002",
-											State:     "In Progress",
-										},
+							},
+							"metadata": {
+								Type: "object",
+								Properties: map[string]*OpenAPISchema{
+									"total_count": {
+										Type:        "integer",
+										Description: "Total number of items across all pages",
+										Example:     10000,
 									},
-									Metadata: PaginationMetadata{
-										TotalCount: 10000,
-										Limit:      100,
-										Offset:     0,
-										HasMore:    true,
-										NextOffset: &[]int{100}[0],
+									"page": {
+										Type:        "integer",
+										Description: "Current page number (page/size pagination)",
+										Example:     1,
+									},
+									"size": {
+										Type:        "integer",
+										Description: "Items per page (page/size pagination)",
+										Example:     100,
+									},
+									"limit": {
+										Type:        "integer",
+										Description: "Items per page (limit/offset pagination)",
+										Example:     100,
+									},
+									"offset": {
+										Type:        "integer",
+										Description: "Starting position (limit/offset pagination)",
+										Example:     0,
+									},
+									"has_more": {
+										Type:        "boolean",
+										Description: "Whether more pages are available",
+										Example:     true,
+									},
+									"next_offset": {
+										Type:        "integer",
+										Description: "Next offset for limit/offset pagination",
+										Example:     100,
+									},
+									"next_page": {
+										Type:        "integer",
+										Description: "Next page number for page/size pagination",
+										Example:     2,
+									},
+									"next_cursor": {
+										Type:        "string",
+										Description: "Next cursor token for cursor-based pagination",
+										Example:     "eyJpZCI6MjAwfQ%3D%3D",
 									},
 								},
+								Required: []string{"total_count", "has_more"},
 							},
 						},
+						Required: []string{"result", "metadata"},
 					},
-					"400": {
-						Description: "Bad request - invalid parameters",
-						Content: map[string]OpenAPIMediaType{
-							"text/plain": {
-								Schema: &OpenAPISchema{
-									Type:    "string",
-									Example: "Total count must be between 1 and 1,000,000",
-								},
+					Example: PaginatedResponse{
+						Result: []PaginatedItem{
+							{
+								ID:        1,
+								Value:     "Item 1",
+								Timestamp: time.Now(),
+							},
+							{
+								ID:        2,
+								Value:     "ServiceNow Record 2",
+								Timestamp: time.Now(),
+								SysID:     "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+								Number:    "INC0000002",
+								State:     "In Progress",
 							},
 						},
-					},
-					"500": {
-						Description: "Internal server error",
-						Content: map[string]OpenAPIMediaType{
-							"text/plain": {
-								Schema: &OpenAPISchema{
-									Type:    "string",
-									Example: "Failed to encode response",
-								},
-							},
+						Metadata: PaginationMetadata{
+							TotalCount: 10000,
+							Limit:      100,
+							Offset:     0,
+							HasMore:    true,
+							NextOffset: &[]int{100}[0],
 						},
 					},
+				},
+			},
+		},
+		"400": {
+			Description: "Bad request - invalid parameters",
+			Content: map[string]OpenAPIMediaType{
+				"text/plain": {
+					Schema: &OpenAPISchema{
+						Type:    "string",
+						Example: "Total count must be between 1 and 1,000,000",
+					},
+				},
+			},
+		},
+		"500": {
+			Description: "Internal server error",
+			Content: map[string]OpenAPIMediaType{
+				"text/plain": {
+					Schema: &OpenAPISchema{
+						Type:    "string",
+						Example: "Failed to encode response",
+					},
+				},
+			},
+		},
 	}
 }
 
 // buildOpenAPISchemas creates the schema specifications
 func (p PaginatedPayloadPlugin) buildOpenAPISchemas() map[string]*OpenAPISchema {
 	return map[string]*OpenAPISchema{
-			"PaginatedItem": {
-				Type: "object",
-				Properties: map[string]*OpenAPISchema{
-					"id": {
-						Type:        "integer",
-						Description: "Unique identifier for the item",
-					},
-					"value": {
-						Type:        "string",
-						Description: "Value or description of the item",
-					},
-					"timestamp": {
-						Type:        "string",
-						Format:      "date-time",
-						Description: "Timestamp when the item was generated",
-					},
-					"sys_id": {
-						Type:        "string",
-						Description: "ServiceNow system ID (optional)",
-					},
-					"number": {
-						Type:        "string",
-						Description: "ServiceNow ticket number (optional)",
-					},
-					"state": {
-						Type:        "string",
-						Description: "ServiceNow state (optional)",
-					},
+		"PaginatedItem": {
+			Type: "object",
+			Properties: map[string]*OpenAPISchema{
+				"id": {
+					Type:        "integer",
+					Description: "Unique identifier for the item",
 				},
-				Required: []string{"id", "value", "timestamp"},
-			},
-			"PaginationMetadata": {
-				Type: "object",
-				Properties: map[string]*OpenAPISchema{
-					"total_count": {
-						Type:        "integer",
-						Description: "Total number of items across all pages",
-					},
-					"page": {
-						Type:        "integer",
-						Description: "Current page number (page/size pagination)",
-					},
-					"size": {
-						Type:        "integer",
-						Description: "Items per page (page/size pagination)",
-					},
-					"limit": {
-						Type:        "integer",
-						Description: "Items per page (limit/offset pagination)",
-					},
-					"offset": {
-						Type:        "integer",
-						Description: "Starting position (limit/offset pagination)",
-					},
-					"has_more": {
-						Type:        "boolean",
-						Description: "Whether more pages are available",
-					},
-					"next_offset": {
-						Type:        "integer",
-						Description: "Next offset for limit/offset pagination",
-					},
-					"next_page": {
-						Type:        "integer",
-						Description: "Next page number for page/size pagination",
-					},
-					"next_cursor": {
-						Type:        "string",
-						Description: "Next cursor token for cursor-based pagination",
-					},
+				"value": {
+					Type:        "string",
+					Description: "Value or description of the item",
 				},
-				Required: []string{"total_count", "has_more"},
+				"timestamp": {
+					Type:        "string",
+					Format:      "date-time",
+					Description: "Timestamp when the item was generated",
+				},
+				"sys_id": {
+					Type:        "string",
+					Description: "ServiceNow system ID (optional)",
+				},
+				"number": {
+					Type:        "string",
+					Description: "ServiceNow ticket number (optional)",
+				},
+				"state": {
+					Type:        "string",
+					Description: "ServiceNow state (optional)",
+				},
 			},
-			"PaginatedResponse": {
-				Type: "object",
-				Properties: map[string]*OpenAPISchema{
-					"result": {
-						Type: "array",
-						Items: &OpenAPISchema{
-							Type:        "object",
-							Description: "PaginatedItem object",
-						},
-					},
-					"metadata": {
+			Required: []string{"id", "value", "timestamp"},
+		},
+		"PaginationMetadata": {
+			Type: "object",
+			Properties: map[string]*OpenAPISchema{
+				"total_count": {
+					Type:        "integer",
+					Description: "Total number of items across all pages",
+				},
+				"page": {
+					Type:        "integer",
+					Description: "Current page number (page/size pagination)",
+				},
+				"size": {
+					Type:        "integer",
+					Description: "Items per page (page/size pagination)",
+				},
+				"limit": {
+					Type:        "integer",
+					Description: "Items per page (limit/offset pagination)",
+				},
+				"offset": {
+					Type:        "integer",
+					Description: "Starting position (limit/offset pagination)",
+				},
+				"has_more": {
+					Type:        "boolean",
+					Description: "Whether more pages are available",
+				},
+				"next_offset": {
+					Type:        "integer",
+					Description: "Next offset for limit/offset pagination",
+				},
+				"next_page": {
+					Type:        "integer",
+					Description: "Next page number for page/size pagination",
+				},
+				"next_cursor": {
+					Type:        "string",
+					Description: "Next cursor token for cursor-based pagination",
+				},
+			},
+			Required: []string{"total_count", "has_more"},
+		},
+		"PaginatedResponse": {
+			Type: "object",
+			Properties: map[string]*OpenAPISchema{
+				"result": {
+					Type: "array",
+					Items: &OpenAPISchema{
 						Type:        "object",
-						Description: "PaginationMetadata object",
+						Description: "PaginatedItem object",
 					},
 				},
-				Required: []string{"result", "metadata"},
+				"metadata": {
+					Type:        "object",
+					Description: "PaginationMetadata object",
+				},
 			},
+			Required: []string{"result", "metadata"},
+		},
 	}
 }
