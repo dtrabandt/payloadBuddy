@@ -1,0 +1,56 @@
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "ServiceNow Peak Hours",
+    "description": "Simulates ServiceNow instance behavior during peak business hours with consistent 200ms delays",
+    "scenario_type": "peak_hours",
+    "base_delay": "200ms",
+    "delay_strategy": "fixed",
+    "servicenow_mode": true,
+    "batch_size": 100,
+    "response_limits": {
+        "max_count": 100000,
+        "default_count": 10000
+    },
+    "scenario_parameters": {
+        "delay_overrides": {
+            "consistent_delay": "200ms"
+        },
+        "timing_patterns": {
+            "intervals": [],
+            "probabilities": [],
+            "thresholds": {}
+        },
+        "simulation_config": {
+            "load_type": "peak_hours",
+            "consistent_behavior": true,
+            "description": "Applies fixed 200ms delay to simulate high-load ServiceNow instance during business peak hours"
+        }
+    },
+    "servicenow_config": {
+        "record_types": [
+            "incident"
+        ],
+        "state_rotation": [
+            "New",
+            "In Progress",
+            "Resolved",
+            "Closed"
+        ],
+        "number_format": "INC%07d",
+        "sys_id_format": "standard"
+    },
+    "metadata": {
+        "author": "Dennis Trabandt",
+        "created_date": "2025-08-04",
+        "version": "1.0.0",
+        "project": "PayloadBuddy Core Scenarios",
+        "tags": [
+            "peak-hours",
+            "servicenow",
+            "production-simulation"
+        ],
+        "compatibility": {
+            "min_payloadbuddy_version": "1.0.0"
+        }
+    }
+}

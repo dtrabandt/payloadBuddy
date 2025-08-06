@@ -315,11 +315,23 @@ func TestDocumentationEndpoints_NoAuthRequired(t *testing.T) {
 			handler:  StreamingPayloadHandler,
 			wantAuth: true,
 		},
+		{
+			name:     "Paginated payload should require auth",
+			path:     "/paginated_payload",
+			handler:  PaginatedPayloadHandler,
+			wantAuth: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", tt.path, nil)
+			// For streaming endpoint, add minimal parameters to avoid long test execution
+			path := tt.path
+			if tt.path == "/stream_payload" {
+				path = tt.path + "?count=1&delay=1ms"
+			}
+
+			req, err := http.NewRequest("GET", path, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

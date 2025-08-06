@@ -8,6 +8,8 @@
 *.so
 *.dylib
 payloadBuddy*
+# Working directory for documentation from servicenow directly to ensure compatibility
+servicenow_docs
 
 # Test binary, built with `go test -c`
 *.test
@@ -29,5 +31,5 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/

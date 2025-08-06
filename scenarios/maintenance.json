@@ -1,0 +1,64 @@
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "ServiceNow Maintenance Window",
+    "description": "Simulates ServiceNow maintenance periods with 500ms base delays and 2-second spikes every 500 items",
+    "scenario_type": "maintenance",
+    "base_delay": "500ms",
+    "delay_strategy": "fixed",
+    "servicenow_mode": true,
+    "batch_size": 100,
+    "response_limits": {
+        "max_count": 50000,
+        "default_count": 10000
+    },
+    "scenario_parameters": {
+        "delay_overrides": {
+            "base_maintenance_delay": "500ms",
+            "spike_delay": "2s"
+        },
+        "timing_patterns": {
+            "intervals": [
+                500
+            ],
+            "probabilities": [],
+            "thresholds": {
+                "spike_interval": 500
+            }
+        },
+        "simulation_config": {
+            "load_type": "maintenance",
+            "spike_behavior": true,
+            "spike_condition": "item_index_multiple",
+            "spike_interval": 500,
+            "spike_delay": "2s",
+            "description": "Maintenance spike: applies 2s delay every 500 items, otherwise 500ms base delay"
+        }
+    },
+    "servicenow_config": {
+        "record_types": [
+            "incident"
+        ],
+        "state_rotation": [
+            "New",
+            "In Progress",
+            "Resolved",
+            "Closed"
+        ],
+        "number_format": "INC%07d",
+        "sys_id_format": "standard"
+    },
+    "metadata": {
+        "author": "Dennis Trabandt",
+        "created_date": "2025-08-04",
+        "version": "1.0.0",
+        "project": "PayloadBuddy Core Scenarios",
+        "tags": [
+            "maintenance",
+            "servicenow",
+            "spike-testing"
+        ],
+        "compatibility": {
+            "min_payloadbuddy_version": "1.0.0"
+        }
+    }
+}

@@ -1,0 +1,65 @@
+{
+    "schema_version": "1.0.0",
+    "scenario_name": "Progressive Database Load",
+    "description": "Simulates progressive database performance degradation with delays increasing by 10ms per 100 items processed",
+    "scenario_type": "database_load",
+    "base_delay": "25ms",
+    "delay_strategy": "progressive",
+    "servicenow_mode": true,
+    "batch_size": 100,
+    "response_limits": {
+        "max_count": 100000,
+        "default_count": 10000
+    },
+    "scenario_parameters": {
+        "delay_overrides": {
+            "degradation_increment": "10ms",
+            "base_database_delay": "25ms"
+        },
+        "timing_patterns": {
+            "intervals": [
+                100
+            ],
+            "probabilities": [],
+            "thresholds": {
+                "degradation_interval": 100,
+                "degradation_rate_ms": 10
+            }
+        },
+        "simulation_config": {
+            "load_type": "database_load",
+            "progressive_degradation": true,
+            "degradation_formula": "baseDelay + (itemIndex/100 * 10ms)",
+            "degradation_interval": 100,
+            "degradation_rate_ms": 10,
+            "description": "Database load delay increases by 10ms for every 100 items processed: delay = baseDelay + (itemIndex/100 * 10ms)"
+        }
+    },
+    "servicenow_config": {
+        "record_types": [
+            "incident"
+        ],
+        "state_rotation": [
+            "New",
+            "In Progress",
+            "Resolved",
+            "Closed"
+        ],
+        "number_format": "INC%07d",
+        "sys_id_format": "standard"
+    },
+    "metadata": {
+        "author": "Dennis Trabandt",
+        "created_date": "2025-08-04",
+        "version": "1.0.0",
+        "project": "PayloadBuddy Core Scenarios",
+        "tags": [
+            "database-load",
+            "progressive-degradation",
+            "performance-testing"
+        ],
+        "compatibility": {
+            "min_payloadbuddy_version": "1.0.0"
+        }
+    }
+}
