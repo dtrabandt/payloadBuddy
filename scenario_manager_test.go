@@ -109,14 +109,14 @@ func TestGetScenarioDelay(t *testing.T) {
 	}
 
 	// Test maintenance scenario with spike
-	delay, strategy = sm.GetScenarioDelay("maintenance", 500)
+	delay, _ = sm.GetScenarioDelay("maintenance", 500)
 	expectedDelay = 2 * time.Second
 	if delay != expectedDelay {
 		t.Errorf("Maintenance spike delay: expected %v, got %v", expectedDelay, delay)
 	}
 
 	// Test maintenance scenario without spike
-	delay, strategy = sm.GetScenarioDelay("maintenance", 100)
+	delay, _ = sm.GetScenarioDelay("maintenance", 100)
 	expectedDelay = 500 * time.Millisecond
 	if delay != expectedDelay {
 		t.Errorf("Maintenance normal delay: expected %v, got %v", expectedDelay, delay)

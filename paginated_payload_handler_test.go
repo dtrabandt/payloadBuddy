@@ -205,8 +205,12 @@ func TestPaginatedPayloadHandlerItemSequence(t *testing.T) {
 	PaginatedPayloadHandler(w2, req2)
 
 	var response1, response2 PaginatedResponse
-	json.NewDecoder(w1.Body).Decode(&response1)
-	json.NewDecoder(w2.Body).Decode(&response2)
+	if err := json.NewDecoder(w1.Body).Decode(&response1); err != nil {
+		t.Fatalf("Failed to decode first response: %v", err)
+	}
+	if err := json.NewDecoder(w2.Body).Decode(&response2); err != nil {
+		t.Fatalf("Failed to decode second response: %v", err)
+	}
 
 	// Check that second page starts where first page ended
 	if len(response1.Result) == 0 || len(response2.Result) == 0 {
@@ -238,7 +242,11 @@ func TestPaginatedPayloadHandlerConcurrency(t *testing.T) {
 			PaginatedPayloadHandler(w, req)
 
 			var response PaginatedResponse
-			json.NewDecoder(w.Body).Decode(&response)
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+				t.Errorf("Failed to decode response: %v", err)
+				results <- 0
+				return
+			}
 			results <- len(response.Result)
 		}(i)
 	}
