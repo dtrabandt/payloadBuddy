@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -328,13 +329,19 @@ func (sv *ScenarioValidator) ValidateScenarioFile(filePath string) {
 // ValidateScenarioFileContent reads and validates a scenario file, returning the scenario or error
 // This function is testable as it doesn't call os.Exit()
 func (sv *ScenarioValidator) ValidateScenarioFileContent(filePath string) (*Scenario, error) {
+	// Validate file path to prevent directory traversal attacks
+	cleanPath := filepath.Clean(filePath)
+	if strings.Contains(cleanPath, "..") {
+		return nil, fmt.Errorf("invalid file path: directory traversal not allowed")
+	}
+
 	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("file does not exist: %s", filePath)
+	if _, err := os.Stat(cleanPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file does not exist: %s", cleanPath)
 	}
 
 	// Read the file
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}

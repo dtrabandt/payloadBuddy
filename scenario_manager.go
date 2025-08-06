@@ -136,7 +136,7 @@ func getScenarioPath() string {
 
 	// Create directory if it doesn't exist
 	if _, err := os.Stat(scenarioPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(scenarioPath, os.ModePerm); err != nil {
+		if err := os.MkdirAll(scenarioPath, 0750); err != nil {
 			log.Printf("Warning: Failed to create scenario directory %s: %v", scenarioPath, err)
 		} else {
 			log.Printf("Created scenario directory: %s", scenarioPath)
@@ -194,9 +194,18 @@ func (sm *ScenarioManager) loadUserScenarios() {
 		}
 
 		if !d.IsDir() && strings.HasSuffix(path, ".json") {
-			content, err := os.ReadFile(path)
+			// Validate path is within userPath to prevent directory traversal
+			cleanPath := filepath.Clean(path)
+			userPathAbs, _ := filepath.Abs(sm.userPath)
+			pathAbs, _ := filepath.Abs(cleanPath)
+			if !strings.HasPrefix(pathAbs, userPathAbs) {
+				log.Printf("Warning: Skipping file outside user directory: %s", path)
+				return nil
+			}
+
+			content, err := os.ReadFile(cleanPath)
 			if err != nil {
-				log.Printf("Warning: Failed to read user scenario %s: %v", path, err)
+				log.Printf("Warning: Failed to read user scenario %s: %v", cleanPath, err)
 				return nil // Continue with next file
 			}
 
