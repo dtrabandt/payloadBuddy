@@ -85,13 +85,13 @@ func PaginatedPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	page := getIntParam(r, "page", 1)
 	size := getIntParam(r, "size", defaultBatchSize)
 	cursor := r.URL.Query().Get("cursor")
-	
+
 	// ServiceNow mode: use scenario default unless explicitly overridden
 	serviceNowMode := defaultServiceNowMode
 	if serviceNowParam := r.URL.Query().Get("servicenow"); serviceNowParam != "" {
 		serviceNowMode = serviceNowParam == "true"
 	}
-	
+
 	delay := getDurationParam(r, "delay", 0)
 
 	// Validate parameters
@@ -427,8 +427,8 @@ func (p PaginatedPayloadPlugin) buildOpenAPIParameters() []OpenAPIParameter {
 			Description: "ServiceNow simulation scenario. All scenarios work with pagination: 'peak_hours' (consistent delays, ideal for both), 'maintenance' (single spike per page), 'network_issues' (random delays per page), 'database_load' (single delay per page)",
 			Required:    false,
 			Schema: &OpenAPISchema{
-				Type: "string",
-				Enum: []any{"peak_hours", "maintenance", "network_issues", "database_load"},
+				Type:    "string",
+				Enum:    []any{"peak_hours", "maintenance", "network_issues", "database_load"},
 				Example: "peak_hours",
 			},
 		},

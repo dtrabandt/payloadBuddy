@@ -144,7 +144,7 @@ func printServiceNowScenarios() {
 	for _, scenarioType := range scenarioTypes {
 		scenario := scenarioManager.GetScenario(scenarioType)
 		usageContext := getScenarioUsageContext(scenarioType)
-		
+
 		if scenario != nil && scenario.Description != "" {
 			// Use full scenario description with usage context
 			description := scenario.Description
