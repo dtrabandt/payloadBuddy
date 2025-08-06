@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var Version = "0.2.5"
+var Version = "0.3.0"
 
 // Global scenario manager
 var scenarioManager *ScenarioManager
