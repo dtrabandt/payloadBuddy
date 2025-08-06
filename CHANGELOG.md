@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2025-08-06
+
 ### Added
 
 - **Paginated Payload Endpoint (`/paginated_payload`)**:
+
   - Complete pagination support for ServiceNow Data Stream actions
   - Multiple pagination patterns: limit/offset, page/size, and cursor-based
   - ServiceNow-compatible field formats (sys_id, number, state)
@@ -20,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extensive test coverage (100+ test cases) including boundary conditions
 
 - **ServiceNow Data Stream Integration**:
+
   - Realistic ServiceNow record structures with proper field naming
   - Incident number generation (INC0000001, etc.)
   - ServiceNow state simulation (New, In Progress, Resolved, Closed)
@@ -27,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Optimized for ServiceNow Flow Designer integration
 
 - **Configurable Scenario System**:
+
   - Dynamic scenario loading from JSON configuration files
   - Embedded scenarios included in binary for single-executable deployment
   - User-defined scenarios in `$HOME/.config/payloadBuddy/scenarios/` directory
@@ -37,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detailed scenario loading and validation logging
 
 - **Enhanced Scenario Management**:
+
   - ScenarioManager for centralized scenario handling
   - ScenarioValidator with comprehensive JSON schema validation
   - Support for all schema features: delay strategies, ServiceNow config, error injection, performance monitoring
@@ -44,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Real-time scenario-based parameter defaults (count, batch_size, ServiceNow mode)
 
 - **Developer Experience**:
+
   - Complete test coverage for scenario system (manager and validator)
   - Comprehensive validation error messages
   - User scenario override testing with temporary directories
@@ -57,18 +64,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Code Modernization**:
+
   - Updated to use modern Go idioms (min function, range over int)
   - Refactored large OpenAPI specification functions into focused, maintainable components
   - Improved code organization following clean code principles
   - Enhanced readability with better function decomposition
 
 - **Streaming Handler**: Updated to use dynamic scenario configuration
+
   - Scenario-aware default parameter selection
   - Enhanced delay calculation using scenario-specific logic
   - Improved ServiceNow mode handling based on scenario configuration
   - Maintained backward compatibility with existing query parameters
 
-- **Application Startup**: 
+- **Application Startup**:
+
   - Scenario manager initialization on startup
   - Enhanced logging showing loaded scenarios with names and types
   - User scenario directory creation messaging
@@ -82,6 +92,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Security Vulnerabilities (gosec)**:
+  - **G304 (CWE-22)**: Fixed file inclusion vulnerabilities in scenario_validator.go and scenario_manager.go by adding path validation and directory traversal protection
+  - **G301 (CWE-276)**: Fixed directory permissions issue by replacing overly permissive `os.ModePerm` (0777) with restrictive permissions (0750)
+  - **G104 (CWE-703)**: Fixed unhandled JSON encoding error in paginated_payload_handler.go by adding proper error handling
+- **Code Quality and Linting**:
+  - Fixed ineffectual variable assignments in scenario_manager_test.go
+  - Added proper error handling for JSON decode operations in test files
+  - Applied `gofmt` formatting to ensure consistent code style across all Go files
 - **Go Language Compliance**: Applied modern Go patterns and resolved linting suggestions
 - **Code Quality**: Improved maintainability through function decomposition and cleaner architecture
 
@@ -293,5 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance changes should be validated with benchmarks
 - Breaking changes require major version bump
 
-[Unreleased]: https://github.com/dennistrabandt/payloadBuddy/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dennistrabandt/payloadBuddy/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/dennistrabandt/payloadBuddy/compare/v0.2.5...v0.3.0
+[v0.2.5]: https://github.com/dennistrabandt/payloadBuddy/releases/tag/v0.2.5
 [0.1.0]: https://github.com/dennistrabandt/payloadBuddy/releases/tag/v0.1.0
