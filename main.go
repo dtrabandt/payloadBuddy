@@ -108,6 +108,7 @@ func printUsageExamples(port string) {
 	fmt.Println("\nPagination examples (ServiceNow Data Stream compatible):")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload?limit=100&offset=0&servicenow=true", port)))
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload?page=2&size=50&servicenow=true", port)))
+	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/paginated_payload?scenario=peak_hours&servicenow=true", port)))
 
 	fmt.Println("\nStreaming examples:")
 	fmt.Printf("  %s\n", getExampleURL(fmt.Sprintf("http://localhost:%s/stream_payload?count=1000&delay=100ms", port)))
@@ -117,17 +118,44 @@ func printUsageExamples(port string) {
 	printServiceNowScenarios()
 }
 
+// getScenarioUsageContext returns usage context information for scenarios
+func getScenarioUsageContext(scenarioType string) string {
+	switch scenarioType {
+	case "peak_hours":
+		return " • Best for: both streaming and pagination testing"
+	case "maintenance":
+		return " • Best for: streaming (periodic spikes), pagination (single spike per page)"
+	case "network_issues":
+		return " • Best for: both (random delays simulate real network conditions)"
+	case "database_load":
+		return " • Best for: streaming (progressive degradation), pagination (single delay per page)"
+	default:
+		return ""
+	}
+}
+
 // printServiceNowScenarios prints all available ServiceNow scenarios including custom ones
 func printServiceNowScenarios() {
-	fmt.Println("\nServiceNow test scenarios:")
+	fmt.Println("\nServiceNow test scenarios (compatible with both streaming and pagination):")
 
 	// Get all scenario types from the scenario manager
 	scenarioTypes := scenarioManager.ListScenarios()
 
 	for _, scenarioType := range scenarioTypes {
 		scenario := scenarioManager.GetScenario(scenarioType)
+		usageContext := getScenarioUsageContext(scenarioType)
+		
 		if scenario != nil && scenario.Description != "" {
-			fmt.Printf("  - %s: %s\n", scenarioType, scenario.Description)
+			// Use full scenario description with usage context
+			description := scenario.Description
+			// Make description more concise for startup output
+			if len(description) > 80 {
+				description = description[:77] + "..."
+			}
+			fmt.Printf("  - %s: %s\n", scenarioType, description)
+			if usageContext != "" {
+				fmt.Printf("    %s\n", usageContext)
+			}
 		} else {
 			// Fallback descriptions for scenarios without description
 			switch scenarioType {
@@ -141,6 +169,9 @@ func printServiceNowScenarios() {
 				fmt.Printf("  - %s: Progressive database load simulation\n", scenarioType)
 			default:
 				fmt.Printf("  - %s: Custom scenario\n", scenarioType)
+			}
+			if usageContext != "" {
+				fmt.Printf("    %s\n", usageContext)
 			}
 		}
 	}

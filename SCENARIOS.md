@@ -16,12 +16,12 @@ This guide covers PayloadBuddy's configurable scenario system, which allows you 
 
 PayloadBuddy uses a sophisticated scenario system that combines:
 
-- **📊 Embedded Scenarios**: Core scenarios built into the binary for immediate use
-- **📁 Dynamic Loading**: User-defined scenarios loaded from `$HOME/.config/payloadBuddy/scenarios/`
-- **🔄 Override Support**: User scenarios override built-in scenarios with the same `scenario_type`
-- **✅ Schema Validation**: Comprehensive JSON schema validation for all scenarios
-- **🔧 Version Compatibility**: Built-in compatibility checking framework
-- **📈 Real-time Configuration**: Scenario-based defaults for count, batch_size, and ServiceNow mode
+- **Embedded Scenarios**: Core scenarios built into the binary for immediate use
+- **Dynamic Loading**: User-defined scenarios loaded from `$HOME/.config/payloadBuddy/scenarios/`
+- **Override Support**: User scenarios override built-in scenarios with the same `scenario_type`
+- **Schema Validation**: Comprehensive JSON schema validation for all scenarios
+- **Version Compatibility**: Built-in compatibility checking framework
+- **Real-time Configuration**: Scenario-based defaults for count, batch_size, and ServiceNow mode
 
 ### How It Works
 
@@ -33,46 +33,70 @@ PayloadBuddy uses a sophisticated scenario system that combines:
 
 ## Built-in Scenarios
 
-PayloadBuddy includes four core scenarios embedded in the binary:
+PayloadBuddy includes four core scenarios embedded in the binary. **All scenarios work with both streaming (`/stream_payload`) and pagination (`/paginated_payload`) endpoints**, adapting their behavior for each context.
 
-### Peak Hours (`scenario=peak_hours`)
+### Peak Hours (`scenario=peak_hours`) - **Ideal for Both**
 - **Purpose**: Simulates slower response times during peak ServiceNow usage
-- **Behavior**: 200ms fixed delay between items
-- **Use Case**: Testing Flow Action timeouts and bulk data processing resilience
+- **Streaming Behavior**: 200ms fixed delay between each item in the stream
+- **Pagination Behavior**: 200ms fixed delay before returning each page
+- **Use Case**: Testing Flow Actions, Data Stream actions, and bulk data processing resilience
 - **ServiceNow Mode**: Enabled by default
 
+**Examples:**
 ```bash
+# Streaming endpoint
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=peak_hours"
+
+# Pagination endpoint  
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=peak_hours&limit=100"
 ```
 
-### Maintenance Window (`scenario=maintenance`)
+### Maintenance Window (`scenario=maintenance`) - **Works with Both**
 - **Purpose**: Simulates maintenance periods with periodic performance spikes
-- **Behavior**: 500ms base delay with 2-second spikes every 500 items
+- **Streaming Behavior**: 500ms base delay with 2-second spikes every 500 items processed
+- **Pagination Behavior**: Single delay spike applied to each page request
 - **Use Case**: Testing integration resilience during ServiceNow maintenance windows
 - **ServiceNow Mode**: Enabled by default
 
+**Examples:**
 ```bash
+# Streaming endpoint (spikes during processing)
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=maintenance&count=2000"
+
+# Pagination endpoint (spike per page)
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=maintenance&limit=100&page=1"
 ```
 
-### Network Issues (`scenario=network_issues`)
+### Network Issues (`scenario=network_issues`) - **Works with Both**
 - **Purpose**: Simulates random network delays and interruptions
-- **Behavior**: 10% chance of 0-3 second random delays
+- **Streaming Behavior**: 10% chance of 0-3 second random delays per item
+- **Pagination Behavior**: Random delays applied to each page request
 - **Use Case**: Testing retry logic, timeout handling, and partial data recovery
-- **ServiceNow Mode**: Enabled by default
+- **ServiceNow Mode**: Disabled by default (focuses on network simulation)
 
+**Examples:**
 ```bash
+# Streaming endpoint (random delays per item)
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=network_issues&count=1000"
+
+# Pagination endpoint (random delays per page)
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=network_issues&limit=50&offset=0"
 ```
 
-### Database Load (`scenario=database_load`)
+### Database Load (`scenario=database_load`) - **Works with Both**
 - **Purpose**: Simulates progressive performance degradation under increasing load
-- **Behavior**: Delay increases by 10ms for every 100 items processed
+- **Streaming Behavior**: Delay increases by 10ms for every 100 items processed (25ms base + progressive)
+- **Pagination Behavior**: Single delay applied per page (calculated based on offset/page position)
 - **Use Case**: Testing large dataset processing and memory management
 - **ServiceNow Mode**: Enabled by default
 
+**Examples:**
 ```bash
+# Streaming endpoint (progressive delays per item)
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=database_load&count=5000"
+
+# Pagination endpoint (delay based on page position)
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=database_load&limit=100&offset=500"
 ```
 
 ## Custom Scenario Configuration
@@ -124,7 +148,9 @@ Create `$HOME/.config/payloadBuddy/scenarios/basic-test.json`:
 
 **Usage:**
 ```bash
+# Works with both endpoints
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=custom"
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=custom&limit=50"
 ```
 
 ### Override Example
@@ -175,9 +201,9 @@ Use the `-verify` flag to validate scenario files before deploying them:
 **Successful validation:**
 ```
 Validating scenario file: my-scenario.json
-✅ Validation successful!
+Validation successful!
 
-📋 Scenario Details:
+Scenario Details:
    Name: My Custom Test
    Type: custom
    Base Delay: 100ms
@@ -188,14 +214,14 @@ Validating scenario file: my-scenario.json
    Version: 1.0.0
    Tags: [testing performance]
 
-🎯 Usage: Use this scenario with ?scenario=custom
-💡 Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available
+Usage: Use this scenario with ?scenario=custom
+Tip: Place this file in $HOME/.config/payloadBuddy/scenarios/ to make it available
 ```
 
 **Failed validation:**
 ```
 Validating scenario file: invalid-scenario.json
-❌ Validation failed:
+Validation failed:
 scenario_name is required
 ```
 

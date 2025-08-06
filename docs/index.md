@@ -28,14 +28,14 @@ tar -xzf payloadBuddy-vX.X.X-linux-amd64.tar.gz
 
 ### Key Features
 
-- **🚀 Large Payload Testing**: REST endpoint returning up to 1M JSON objects
-- **📡 Advanced Streaming**: Configurable delays, patterns, and ServiceNow scenarios
-- **📋 Pagination Support**: Complete support for limit/offset, page/size, and cursor-based pagination
-- **🎯 ServiceNow Data Stream**: Perfect for testing ServiceNow Data Stream actions
-- **📋 Configurable Scenarios**: JSON-based scenario system with user customization
-- **🔐 Security Features**: Optional HTTP Basic Authentication
-- **📖 Interactive Documentation**: Built-in Swagger UI and OpenAPI specs
-- **🏗️ Plugin Architecture**: Easily extensible with new endpoints
+- **Large Payload Testing**: REST endpoint returning up to 1M JSON objects
+- **Advanced Streaming**: Configurable delays, patterns, and ServiceNow scenarios
+- **Pagination Support**: Complete support for limit/offset, page/size, and cursor-based pagination
+- **ServiceNow Data Stream**: Perfect for testing ServiceNow Data Stream actions
+- **Configurable Scenarios**: JSON-based scenario system with user customization
+- **Security Features**: Optional HTTP Basic Authentication
+- **Interactive Documentation**: Built-in Swagger UI and OpenAPI specs
+- **Plugin Architecture**: Easily extensible with new endpoints
 
 ### API Endpoints
 
@@ -88,40 +88,66 @@ ServiceNow environments experience various performance patterns that can break p
 
 ### Testing Scenarios
 
-#### **Peak Hours Testing**
+**All scenarios work with both streaming and pagination endpoints**, adapting their behavior appropriately:
 
+#### **Peak Hours Testing** - *Ideal for Both*
+
+**Streaming** (per-item delays):
 ```bash
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=peak_hours&servicenow=true"
 ```
 
+**Pagination** (per-page delays):
+```bash
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=peak_hours&servicenow=true&limit=100"
+```
+
 - **Simulates**: Slower response times during peak ServiceNow usage (200ms delays)
-- **Tests**: Flow Action timeout handling, bulk data processing resilience
+- **Tests**: Flow Action timeout handling, Data Stream action resilience, bulk data processing
 - **Real-world impact**: Prevents integration failures during business hours
 
-#### **Maintenance Window Testing**
+#### **Maintenance Window Testing** - *Works with Both*
 
+**Streaming** (periodic spikes during stream):
 ```bash
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=maintenance&count=2000"
+```
+
+**Pagination** (spike per page):
+```bash
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=maintenance&limit=100&page=1"
 ```
 
 - **Simulates**: Maintenance periods with periodic performance spikes (500ms + 2s spikes)
 - **Tests**: Integration resilience during planned ServiceNow maintenance
 - **Real-world impact**: Ensures integrations survive weekly maintenance windows
 
-#### **Network Issues Testing**
+#### **Network Issues Testing** - *Works with Both*
 
+**Streaming** (random delays per item):
 ```bash
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=network_issues&count=1000"
+```
+
+**Pagination** (random delays per page):
+```bash
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=network_issues&limit=50&offset=0"
 ```
 
 - **Simulates**: Random network delays and interruptions (10% chance of 0-3s delays)
 - **Tests**: Retry logic, timeout handling, partial data recovery
 - **Real-world impact**: Prevents data loss during network instability
 
-#### **Database Load Testing**
+#### **Database Load Testing** - *Works with Both*
 
+**Streaming** (progressive delays per item):
 ```bash
 curl -u user:pass "http://localhost:8080/stream_payload?scenario=database_load&count=5000"
+```
+
+**Pagination** (delay per page based on position):
+```bash
+curl -u user:pass "http://localhost:8080/paginated_payload?scenario=database_load&limit=100&offset=500"
 ```
 
 - **Simulates**: Progressive performance degradation under increasing load
@@ -182,13 +208,13 @@ curl -u user:pass "http://localhost:8080/stream_payload?scenario=custom"
 
 ### Key Features
 
-- **📁 Dynamic Loading**: Automatic loading from user directory
-- **🔄 Override Support**: User scenarios override built-in scenarios
-- **✅ Schema Validation**: Comprehensive JSON validation with detailed error messages
-- **📊 Embedded Scenarios**: Core scenarios built into binary for immediate use
-- **🔧 Advanced Configuration**: Error injection, performance monitoring, custom timing patterns
+- **Dynamic Loading**: Automatic loading from user directory
+- **Override Support**: User scenarios override built-in scenarios
+- **Schema Validation**: Comprehensive JSON validation with detailed error messages
+- **Embedded Scenarios**: Core scenarios built into binary for immediate use
+- **Advanced Configuration**: Error injection, performance monitoring, custom timing patterns
 
-> 📖 **Complete Guide**: For detailed documentation, JSON schema reference, advanced examples, and troubleshooting, see the comprehensive **[Scenario Configuration Guide](scenarios)**.
+> **Complete Guide**: For detailed documentation, JSON schema reference, advanced examples, and troubleshooting, see the comprehensive **[Scenario Configuration Guide](scenarios)**.
 
 ## Documentation
 

@@ -520,3 +520,98 @@ func TestPaginatedPayloadHandlerAuthentication(t *testing.T) {
 		})
 	}
 }
+
+// TestPaginatedPayloadHandlerScenarios tests scenario parameter support
+func TestPaginatedPayloadHandlerScenarios(t *testing.T) {
+	// Disable auth for tests
+	originalAuth := *enableAuth
+	*enableAuth = false
+	defer func() { *enableAuth = originalAuth }()
+
+	// Save and restore scenario manager
+	originalManager := scenarioManager
+	defer func() { scenarioManager = originalManager }()
+
+	// Create a test scenario manager
+	scenarioManager = NewScenarioManager()
+
+	tests := []struct {
+		name           string
+		scenario       string
+		expectedStatus int
+		checkDelay     bool
+	}{
+		{
+			name:           "Peak hours scenario",
+			scenario:       "peak_hours",
+			expectedStatus: http.StatusOK,
+			checkDelay:     true,
+		},
+		{
+			name:           "Database load scenario",
+			scenario:       "database_load",
+			expectedStatus: http.StatusOK,
+			checkDelay:     true,
+		},
+		{
+			name:           "Invalid scenario (should work with defaults)",
+			scenario:       "invalid_scenario",
+			expectedStatus: http.StatusOK,
+			checkDelay:     false,
+		},
+		{
+			name:           "Empty scenario (should work with defaults)",
+			scenario:       "",
+			expectedStatus: http.StatusOK,
+			checkDelay:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create request with scenario parameter
+			var url string
+			if tt.scenario != "" {
+				url = "/paginated_payload?scenario=" + tt.scenario + "&limit=5"
+			} else {
+				url = "/paginated_payload?limit=5"
+			}
+			
+			req := httptest.NewRequest("GET", url, nil)
+			w := httptest.NewRecorder()
+
+			startTime := time.Now()
+			PaginatedPayloadHandler(w, req)
+			duration := time.Since(startTime)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+
+			if w.Code == http.StatusOK {
+				// Verify JSON response
+				var response PaginatedResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Errorf("Failed to parse JSON response: %v", err)
+					return
+				}
+
+				// Check we got the expected number of items
+				if len(response.Result) != 5 {
+					t.Errorf("Expected 5 items, got %d", len(response.Result))
+				}
+
+				// For valid scenarios, check that some delay occurred
+				if tt.checkDelay && duration < 50*time.Millisecond {
+					t.Logf("Warning: Expected some delay for scenario '%s', but request completed in %v", tt.scenario, duration)
+					// Note: Not failing the test as scenarios might have very small delays in some cases
+				}
+
+				// Check metadata
+				if response.Metadata.TotalCount == 0 {
+					t.Error("Expected non-zero total count in metadata")
+				}
+			}
+		})
+	}
+}

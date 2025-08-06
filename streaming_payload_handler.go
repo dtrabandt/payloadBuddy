@@ -428,11 +428,11 @@ func (s StreamingPayloadPlugin) OpenAPISpec() OpenAPIPathSpec {
 					{
 						Name:        "scenario",
 						In:          "query",
-						Description: "ServiceNow simulation scenario: 'peak_hours' = 200ms delays, 'maintenance' = 500ms with 2s spikes every 500 items, 'network_issues' = random spikes up to 3s (10% chance), 'database_load' = progressively increasing delays",
+						Description: "ServiceNow simulation scenario. All scenarios work with streaming: 'peak_hours' (consistent delays, ideal for both), 'maintenance' (periodic spikes per batch), 'network_issues' (random delays per item), 'database_load' (progressive delays per item)",
 						Required:    false,
 						Schema: &OpenAPISchema{
 							Type:    "string",
-							Enum:    []interface{}{"peak_hours", "maintenance", "network_issues", "database_load"},
+							Enum:    []any{"peak_hours", "maintenance", "network_issues", "database_load"},
 							Example: "peak_hours",
 						},
 					},

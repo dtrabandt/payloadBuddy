@@ -207,12 +207,12 @@ Every PR triggers:
 ### Quality Gates
 
 All checks must pass before merging:
-- ✅ All tests pass
-- ✅ Coverage ≥ 75%
-- ✅ No linting violations
-- ✅ No security issues
-- ✅ Code properly formatted
-- ✅ Build successful
+- All tests pass
+- Coverage ≥ 75%
+- No linting violations
+- No security issues
+- Code properly formatted
+- Build successful
 
 ### Release Process
 

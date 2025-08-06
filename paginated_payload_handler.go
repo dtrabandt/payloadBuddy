@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -39,14 +40,15 @@ type PaginatedResponse struct {
 // PaginatedPayloadHandler handles paginated REST API responses
 //
 // Query Parameters:
-//   - total: Total number of items available (default: 10000)
-//   - limit: Number of items per page for limit/offset pagination (default: 100)
+//   - total: Total number of items available (default: 10000, scenario-configurable)
+//   - limit: Number of items per page for limit/offset pagination (default: 100, scenario-configurable)
 //   - offset: Starting position for limit/offset pagination (default: 0)
 //   - page: Page number for page/size pagination (default: 1)
-//   - size: Items per page for page/size pagination (default: 100)
+//   - size: Items per page for page/size pagination (default: 100, scenario-configurable)
 //   - cursor: Cursor token for cursor-based pagination
-//   - servicenow: Generate ServiceNow-style fields (default: false)
+//   - servicenow: Generate ServiceNow-style fields (default: false, scenario-configurable)
 //   - delay: Delay before response (e.g., "100ms", "1s")
+//   - scenario: ServiceNow scenarios ("peak_hours", "maintenance", "network_issues", "database_load")
 //
 // Pagination Types:
 //   - Limit/Offset: Use 'limit' and 'offset' parameters
@@ -57,25 +59,56 @@ type PaginatedResponse struct {
 //   - /paginated_payload?limit=50&offset=100
 //   - /paginated_payload?page=2&size=25&servicenow=true
 //   - /paginated_payload?cursor=eyJpZCI6MTAwfQ%3D%3D
+//   - /paginated_payload?scenario=peak_hours&servicenow=true
+//   - /paginated_payload?scenario=database_load&limit=25
 func PaginatedPayloadHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse parameters
-	totalCount := getIntParam(r, "total", 10000)
-	limit := getIntParam(r, "limit", 100)
+	// Parse scenario parameter
+	scenario := strings.ToLower(r.URL.Query().Get("scenario"))
+
+	// Get scenario-based defaults if scenario manager is available and scenario is specified
+	var defaultCount, maxCount, defaultBatchSize int
+	var defaultServiceNowMode bool
+	if scenarioManager != nil && scenario != "" {
+		defaultBatchSize, defaultServiceNowMode, maxCount, defaultCount = scenarioManager.GetScenarioConfig(scenario)
+	} else {
+		// Use hardcoded defaults for backward compatibility
+		defaultCount = 10000
+		maxCount = 1000000
+		defaultBatchSize = 100
+		defaultServiceNowMode = false
+	}
+
+	// Parse parameters with scenario-aware defaults
+	totalCount := getIntParam(r, "total", defaultCount)
+	limit := getIntParam(r, "limit", defaultBatchSize)
 	offset := getIntParam(r, "offset", 0)
 	page := getIntParam(r, "page", 1)
-	size := getIntParam(r, "size", 100)
+	size := getIntParam(r, "size", defaultBatchSize)
 	cursor := r.URL.Query().Get("cursor")
-	serviceNowMode := r.URL.Query().Get("servicenow") == "true"
+	
+	// ServiceNow mode: use scenario default unless explicitly overridden
+	serviceNowMode := defaultServiceNowMode
+	if serviceNowParam := r.URL.Query().Get("servicenow"); serviceNowParam != "" {
+		serviceNowMode = serviceNowParam == "true"
+	}
+	
 	delay := getDurationParam(r, "delay", 0)
 
 	// Validate parameters
-	if totalCount <= 0 || totalCount > 1000000 {
-		http.Error(w, "Total count must be between 1 and 1,000,000", http.StatusBadRequest)
+	if totalCount <= 0 || totalCount > maxCount {
+		http.Error(w, fmt.Sprintf("Total count must be between 1 and %d", maxCount), http.StatusBadRequest)
 		return
 	}
 
-	// Apply delay if specified (simulates API processing time)
-	if delay > 0 {
+	// Apply scenario-based delay if specified
+	if scenario != "" && scenarioManager != nil {
+		// For pagination, use item index 0 to get base scenario delay
+		scenarioDelay, _ := scenarioManager.GetScenarioDelay(scenario, 0)
+		if scenarioDelay > 0 {
+			time.Sleep(scenarioDelay)
+		}
+	} else if delay > 0 {
+		// Apply custom delay if specified (simulates API processing time)
 		time.Sleep(delay)
 	}
 
@@ -384,6 +417,17 @@ func (p PaginatedPayloadPlugin) buildOpenAPIParameters() []OpenAPIParameter {
 			Schema: &OpenAPISchema{
 				Type:    "string",
 				Example: "100ms",
+			},
+		},
+		{
+			Name:        "scenario",
+			In:          "query",
+			Description: "ServiceNow simulation scenario. All scenarios work with pagination: 'peak_hours' (consistent delays, ideal for both), 'maintenance' (single spike per page), 'network_issues' (random delays per page), 'database_load' (single delay per page)",
+			Required:    false,
+			Schema: &OpenAPISchema{
+				Type: "string",
+				Enum: []any{"peak_hours", "maintenance", "network_issues", "database_load"},
+				Example: "peak_hours",
 			},
 		},
 	}
