@@ -315,6 +315,12 @@ func TestDocumentationEndpoints_NoAuthRequired(t *testing.T) {
 			handler:  StreamingPayloadHandler,
 			wantAuth: true,
 		},
+		{
+			name:     "Paginated payload should require auth",
+			path:     "/paginated_payload",
+			handler:  PaginatedPayloadHandler,
+			wantAuth: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -32,7 +32,7 @@ go build && go test -v                 # Build and test in sequence
 
 ### Plugin-Based Architecture
 The server uses a plugin system where endpoints are registered via the `PayloadPlugin` interface:
-- Each handler (rest_payload_handler.go, streaming_payload_handler.go, documentation_handler.go) implements `PayloadPlugin`
+- Each handler (rest_payload_handler.go, streaming_payload_handler.go, paginated_payload_handler.go, documentation_handler.go) implements `PayloadPlugin`
 - Plugins self-register in their `init()` functions using `registerPlugin()`
 - Main server automatically discovers and registers all plugins with authentication middleware
 - Each plugin provides its own OpenAPI specification via the `OpenAPISpec()` method
@@ -59,6 +59,12 @@ The server uses a plugin system where endpoints are registered via the `PayloadP
 - ServiceNow-specific simulation scenarios (peak_hours, maintenance, network_issues, database_load)
 - Configurable via query parameters: count, delay, strategy, scenario, batch_size, servicenow
 
+**paginated_payload_handler.go**: Paginated REST endpoint (`/paginated_payload`)
+- Supports limit/offset, page/size, and cursor-based pagination patterns
+- Perfect for ServiceNow Data Stream action testing
+- Compatible response structure with pagination metadata
+- Configurable via query parameters: total, limit, offset, page, size, cursor, servicenow, delay
+
 **documentation_handler.go**: OpenAPI 3.1.1 specification and Swagger UI endpoints
 - `/openapi.json`: Complete OpenAPI specification for all endpoints
 - `/swagger`: Interactive Swagger UI for API documentation and testing
@@ -69,6 +75,7 @@ The server uses a plugin system where endpoints are registered via the `PayloadP
 This server is specifically designed for ServiceNow REST integration testing:
 - ServiceNow mode generates realistic record structures (sys_id, incident numbers, states)
 - Scenarios simulate real ServiceNow performance characteristics
+- Complete Data Stream action support with proper pagination patterns
 - Examples in startup output use curl format for easy ServiceNow Flow Action integration
 
 ### Authentication Flow
@@ -80,7 +87,7 @@ This server is specifically designed for ServiceNow REST integration testing:
 
 ### Authentication Exclusions
 - **Documentation endpoints are public**: `/swagger` and `/openapi.json` are excluded from authentication
-- **API endpoints require auth**: `/rest_payload` and `/stream_payload` require authentication when `-auth` is enabled
+- **API endpoints require auth**: `/rest_payload`, `/stream_payload`, and `/paginated_payload` require authentication when `-auth` is enabled
 - **Rationale**: Standard practice to keep API documentation publicly accessible while protecting data endpoints
 - **Implementation**: Conditional middleware application in main.go based on endpoint path
 
