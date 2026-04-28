@@ -16,7 +16,7 @@ We welcome contributions to PayloadBuddy! This project follows git-flow and Test
 
 ### Prerequisites
 
-- Go 1.21 or newer
+- Go 1.26.2 or newer
 - Git with git-flow extension (optional but recommended)
 - golangci-lint for linting
 - gosec for security scanning
@@ -135,7 +135,7 @@ We use `golangci-lint` with strict settings:
 
 ### Testing
 
-- **Minimum coverage**: 75% (currently at 76.9%)
+- **Minimum coverage**: 80% (currently at 82.2%)
 - **TDD approach**: Write tests before implementation
 - **Comprehensive**: Cover happy paths, edge cases, and error conditions
 - **Fast execution**: Test suite should complete in under 10 seconds
@@ -188,8 +188,8 @@ func TestFunctionName(t *testing.T) {
 
 ### Coverage Requirements
 
-- **Minimum**: 75% statement coverage
-- **Target**: 80%+ for new features
+- **Minimum**: 80% statement coverage
+- **Target**: 85%+ for new features
 - **Exceptions**: `main()` function and some error paths are acceptable to exclude
 
 ## CI/CD Pipeline
@@ -198,7 +198,7 @@ func TestFunctionName(t *testing.T) {
 
 Every PR triggers:
 - **Go Testing**: Full test suite with race detection
-- **Code Coverage**: Must meet 75% minimum
+- **Code Coverage**: Must meet 80% minimum
 - **Linting**: `golangci-lint` with strict rules
 - **Security**: `gosec` vulnerability scanning
 - **Formatting**: `gofmt` compliance check
@@ -208,7 +208,7 @@ Every PR triggers:
 
 All checks must pass before merging:
 - All tests pass
-- Coverage ≥ 75%
+- Coverage ≥ 80%
 - No linting violations
 - No security issues
 - Code properly formatted
@@ -225,14 +225,26 @@ All checks must pass before merging:
 ## Project Structure
 
 ```
-├── main.go                          # Server setup and plugin registration
-├── auth.go                          # HTTP Basic Authentication middleware
-├── openapi.go                       # OpenAPI 3.1.1 data structures
-├── rest_payload_handler.go          # Large single-response endpoint
-├── streaming_payload_handler.go     # Advanced streaming endpoint
-├── paginated_payload_handler.go     # Paginated REST endpoint (ServiceNow Data Stream)
-├── documentation_handler.go         # OpenAPI spec and Swagger UI
-├── *_test.go                        # Comprehensive test suite
+├── main.go                          # Server bootstrap and explicit plugin wiring
+├── internal/
+│   ├── auth/
+│   │   ├── auth.go                  # HTTP Basic Authentication (Config, Setup, Middleware)
+│   │   └── auth_test.go
+│   ├── handlers/
+│   │   ├── plugin.go                # PayloadPlugin interface
+│   │   ├── rest.go                  # Large single-response endpoint (/rest_payload)
+│   │   ├── streaming.go             # Advanced streaming endpoint (/stream_payload)
+│   │   ├── paginated.go             # Paginated REST endpoint (/paginated_payload)
+│   │   ├── docs.go                  # OpenAPI JSON endpoint (/openapi.json)
+│   │   ├── swagger.go               # Swagger UI endpoint (/swagger)
+│   │   └── *_test.go
+│   ├── openapi/
+│   │   └── types.go                 # OpenAPI 3.1.1 data structures
+│   └── scenarios/
+│       ├── manager.go               # Dynamic scenario loading and management
+│       ├── validator.go             # JSON schema validation for scenarios
+│       ├── embedded/                # Built-in scenario JSON files
+│       └── *_test.go
 ├── .github/workflows/               # CI/CD pipeline
 │   ├── test.yml                     # PR testing workflow
 │   └── release.yml                  # Release automation
@@ -256,10 +268,10 @@ type PayloadPlugin interface {
 
 ### Adding New Endpoints
 
-1. **Create handler file**: `your_handler.go`
+1. **Create handler file**: `internal/handlers/your_handler.go`
 2. **Implement interface**: Create plugin struct implementing `PayloadPlugin`
-3. **Register plugin**: Add `registerPlugin(YourPlugin{})` in `init()`
-4. **Add tests**: Create `your_handler_test.go`
+3. **Wire in main**: Add `YourPlugin{}` to the plugin slice in `main.go`
+4. **Add tests**: Create `internal/handlers/your_handler_test.go`
 5. **Update documentation**: Plugin automatically appears in OpenAPI spec
 
 ## Areas for Improvement
