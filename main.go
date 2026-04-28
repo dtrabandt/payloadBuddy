@@ -140,11 +140,12 @@ func scenarioUsageContext(scenarioType string) string {
 
 func startHTTPServer(port string, mux *http.ServeMux) {
 	server := &http.Server{
-		Addr:         ":" + port,
-		Handler:      mux,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:              ":" + port,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	fmt.Println("\nPress Ctrl+C to stop the server")
 	if err := server.ListenAndServe(); err != nil {

@@ -14,7 +14,6 @@ linters:
     - revive          # Opinionated linter with good defaults
     - bodyclose       # Check that HTTP response bodies are closed
     - noctx           # Find HTTP requests sent without context
-    - exportloopref   # Check for exportedloop variable
 
 linters-settings:
   revive:
