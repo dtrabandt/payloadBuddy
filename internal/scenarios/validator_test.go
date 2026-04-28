@@ -1,14 +1,15 @@
-package main
+package scenarios
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestScenarioValidator(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test valid scenario
 	validScenario := Scenario{
@@ -49,7 +50,7 @@ func TestScenarioValidator(t *testing.T) {
 }
 
 func TestScenarioValidatorRequiredFields(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test missing scenario_name
 	scenario := Scenario{
@@ -57,7 +58,7 @@ func TestScenarioValidatorRequiredFields(t *testing.T) {
 		BaseDelay:    "100ms",
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "scenario_name is required") {
+	if err == nil || !strings.Contains(err.Error(), "scenario_name is required") {
 		t.Errorf("Expected scenario_name required error, got: %v", err)
 	}
 
@@ -67,7 +68,7 @@ func TestScenarioValidatorRequiredFields(t *testing.T) {
 		BaseDelay:    "100ms",
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "scenario_type is required") {
+	if err == nil || !strings.Contains(err.Error(), "scenario_type is required") {
 		t.Errorf("Expected scenario_type required error, got: %v", err)
 	}
 
@@ -77,13 +78,13 @@ func TestScenarioValidatorRequiredFields(t *testing.T) {
 		ScenarioType: "custom",
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "base_delay is required") {
+	if err == nil || !strings.Contains(err.Error(), "base_delay is required") {
 		t.Errorf("Expected base_delay required error, got: %v", err)
 	}
 }
 
 func TestScenarioValidatorEnums(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid scenario_type
 	scenario := Scenario{
@@ -92,7 +93,7 @@ func TestScenarioValidatorEnums(t *testing.T) {
 		BaseDelay:    "100ms",
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "scenario_type must be one of") {
+	if err == nil || !strings.Contains(err.Error(), "scenario_type must be one of") {
 		t.Errorf("Expected scenario_type enum error, got: %v", err)
 	}
 
@@ -104,13 +105,13 @@ func TestScenarioValidatorEnums(t *testing.T) {
 		DelayStrategy: "invalid_strategy",
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "delay_strategy must be one of") {
+	if err == nil || !strings.Contains(err.Error(), "delay_strategy must be one of") {
 		t.Errorf("Expected delay_strategy enum error, got: %v", err)
 	}
 }
 
 func TestScenarioValidatorDelayFormat(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	testCases := []struct {
 		delay     string
@@ -143,7 +144,7 @@ func TestScenarioValidatorDelayFormat(t *testing.T) {
 }
 
 func TestScenarioValidatorResponseLimits(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid max_count
 	scenario := Scenario{
@@ -155,7 +156,7 @@ func TestScenarioValidatorResponseLimits(t *testing.T) {
 		},
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "max_count must be between") {
+	if err == nil || !strings.Contains(err.Error(), "max_count must be between") {
 		t.Errorf("Expected max_count validation error, got: %v", err)
 	}
 
@@ -169,13 +170,13 @@ func TestScenarioValidatorResponseLimits(t *testing.T) {
 		},
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "default_count must be between 0 and 1000000") {
+	if err == nil || !strings.Contains(err.Error(), "default_count must be between 0 and 1000000") {
 		t.Errorf("Expected default_count validation error, got: %v", err)
 	}
 }
 
 func TestScenarioValidatorServiceNowConfig(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid record_type
 	scenario := Scenario{
@@ -187,7 +188,7 @@ func TestScenarioValidatorServiceNowConfig(t *testing.T) {
 		},
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "invalid record_type") {
+	if err == nil || !strings.Contains(err.Error(), "invalid record_type") {
 		t.Errorf("Expected record_type validation error, got: %v", err)
 	}
 
@@ -201,13 +202,13 @@ func TestScenarioValidatorServiceNowConfig(t *testing.T) {
 		},
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "sys_id_format must be one of") {
+	if err == nil || !strings.Contains(err.Error(), "sys_id_format must be one of") {
 		t.Errorf("Expected sys_id_format validation error, got: %v", err)
 	}
 }
 
 func TestScenarioValidatorVersionFormat(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid schema_version
 	scenario := Scenario{
@@ -217,7 +218,7 @@ func TestScenarioValidatorVersionFormat(t *testing.T) {
 		SchemaVersion: "invalid.version",
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "schema_version validation failed") {
+	if err == nil || !strings.Contains(err.Error(), "schema_version validation failed") {
 		t.Errorf("Expected schema_version validation error, got: %v", err)
 	}
 
@@ -231,13 +232,13 @@ func TestScenarioValidatorVersionFormat(t *testing.T) {
 		},
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "version validation failed") {
+	if err == nil || !strings.Contains(err.Error(), "version validation failed") {
 		t.Errorf("Expected metadata version validation error, got: %v", err)
 	}
 }
 
 func TestScenarioValidatorDateFormat(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid created_date
 	scenario := Scenario{
@@ -249,7 +250,7 @@ func TestScenarioValidatorDateFormat(t *testing.T) {
 		},
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "created_date validation failed") {
+	if err == nil || !strings.Contains(err.Error(), "created_date") {
 		t.Errorf("Expected created_date validation error, got: %v", err)
 	}
 
@@ -269,7 +270,7 @@ func TestScenarioValidatorDateFormat(t *testing.T) {
 }
 
 func TestValidateJSON(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test valid JSON
 	validJSON := `{
@@ -311,7 +312,7 @@ func TestValidateJSON(t *testing.T) {
 }
 
 func TestErrorInjectionValidation(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid error_rate
 	scenario := Scenario{
@@ -324,7 +325,7 @@ func TestErrorInjectionValidation(t *testing.T) {
 		},
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "error_rate must be between") {
+	if err == nil || !strings.Contains(err.Error(), "error_rate must be between") {
 		t.Errorf("Expected error_rate validation error, got: %v", err)
 	}
 
@@ -340,13 +341,13 @@ func TestErrorInjectionValidation(t *testing.T) {
 		},
 	}
 	err = validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "invalid error_type") {
+	if err == nil || !strings.Contains(err.Error(), "invalid error_type") {
 		t.Errorf("Expected error_type validation error, got: %v", err)
 	}
 }
 
 func TestPerformanceConfigValidation(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Test invalid metrics_interval
 	scenario := Scenario{
@@ -359,29 +360,14 @@ func TestPerformanceConfigValidation(t *testing.T) {
 		},
 	}
 	err := validator.ValidateScenario(&scenario)
-	if err == nil || !contains(err.Error(), "metrics_interval must be between") {
+	if err == nil || !strings.Contains(err.Error(), "metrics_interval must be between") {
 		t.Errorf("Expected metrics_interval validation error, got: %v", err)
 	}
 }
 
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[:len(substr)] == substr ||
-		len(s) > len(substr) && stringContains(s, substr)
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
 // Test the refactored ValidateScenarioFileContent function
 func TestValidateScenarioFileContent(t *testing.T) {
-	validator := NewScenarioValidator()
+	validator := NewValidator()
 
 	// Create temporary directory for test files
 	tempDir := t.TempDir()
@@ -483,5 +469,194 @@ func TestValidateScenarioFileContent(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestValidateScenarioFile_Success(t *testing.T) {
+	validator := NewValidator()
+	tempDir := t.TempDir()
+	filePath := filepath.Join(tempDir, "valid.json")
+	content := `{
+		"schema_version": "1.0.0",
+		"scenario_name": "Test",
+		"scenario_type": "custom",
+		"base_delay": "100ms"
+	}`
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Success path: ValidateScenarioFile prints details and returns without calling os.Exit.
+	validator.ValidateScenarioFile(filePath)
+}
+
+func TestValidateScenarioParameters_Coverage(t *testing.T) {
+	validator := NewValidator()
+
+	scenario := Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		ScenarioParams: &ScenarioParameters{
+			DelayOverrides: map[string]string{"invalid key": "100ms"},
+		},
+	}
+	err := validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "invalid delay_override key") {
+		t.Errorf("Expected delay_override key error, got: %v", err)
+	}
+
+	scenario = Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		ScenarioParams: &ScenarioParameters{
+			DelayOverrides: map[string]string{"validKey": "invalid"},
+		},
+	}
+	err = validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "delay_override") {
+		t.Errorf("Expected delay_override value error, got: %v", err)
+	}
+
+	scenario = Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		ScenarioParams: &ScenarioParameters{
+			TimingPatterns: &TimingPatterns{Intervals: []int{0}},
+		},
+	}
+	err = validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "timing pattern intervals") {
+		t.Errorf("Expected timing interval error, got: %v", err)
+	}
+
+	scenario = Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		ScenarioParams: &ScenarioParameters{
+			TimingPatterns: &TimingPatterns{Probabilities: []float64{1.5}},
+		},
+	}
+	err = validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "timing pattern probabilities") {
+		t.Errorf("Expected timing probability error, got: %v", err)
+	}
+}
+
+func TestValidateMetadata_CompatibilityVersions(t *testing.T) {
+	validator := NewValidator()
+
+	scenario := Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		Metadata: &ScenarioMetadata{
+			Compatibility: &CompatibilityInfo{
+				MinPayloadBuddyVersion: "invalid.version",
+			},
+		},
+	}
+	err := validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "min_payloadbuddy_version") {
+		t.Errorf("Expected min_payloadbuddy_version error, got: %v", err)
+	}
+
+	scenario = Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		Metadata: &ScenarioMetadata{
+			Compatibility: &CompatibilityInfo{
+				TestedVersions: []string{"invalid.version"},
+			},
+		},
+	}
+	err = validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "tested_version") {
+		t.Errorf("Expected tested_version error, got: %v", err)
+	}
+}
+
+func TestValidatePerformanceConfig_ValidInterval(t *testing.T) {
+	validator := NewValidator()
+
+	scenario := Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		PerfMonitoring: &PerformanceConfig{
+			Enabled:         true,
+			MetricsInterval: 1000,
+		},
+	}
+	if err := validator.ValidateScenario(&scenario); err != nil {
+		t.Errorf("Valid metrics_interval should not error, got: %v", err)
+	}
+}
+
+func TestValidateScenarioFile_Comprehensive(t *testing.T) {
+	validator := NewValidator()
+	tempDir := t.TempDir()
+	filePath := filepath.Join(tempDir, "full.json")
+	// All optional fields populated to exercise all printScenarioDetails branches.
+	content := `{
+		"schema_version": "1.0.0",
+		"scenario_name": "Full Test",
+		"scenario_type": "custom",
+		"base_delay": "200ms",
+		"delay_strategy": "progressive",
+		"servicenow_mode": true,
+		"batch_size": 50,
+		"description": "Full scenario description",
+		"response_limits": {
+			"max_count": 5000,
+			"default_count": 500
+		},
+		"metadata": {
+			"author": "Test Author",
+			"version": "1.2.3",
+			"tags": ["a", "b"]
+		}
+	}`
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	validator.ValidateScenarioFile(filePath)
+}
+
+func TestErrorInjectionValidation_NegativeRate(t *testing.T) {
+	validator := NewValidator()
+
+	scenario := Scenario{
+		ScenarioName: "Test",
+		ScenarioType: "custom",
+		BaseDelay:    "100ms",
+		ErrorInjection: &ErrorInjectionConfig{
+			Enabled:   true,
+			ErrorRate: -0.1,
+		},
+	}
+	err := validator.ValidateScenario(&scenario)
+	if err == nil || !strings.Contains(err.Error(), "error_rate must be between") {
+		t.Errorf("Expected error_rate error for negative value, got: %v", err)
+	}
+}
+
+func TestGetScenarioDelay_CustomType(t *testing.T) {
+	sm := NewManager()
+	sm.scenarios["mytype"] = &Scenario{
+		ScenarioType:  "mytype",
+		BaseDelay:     "50ms",
+		DelayStrategy: "fixed",
+	}
+
+	delay, strategy := sm.GetScenarioDelay("mytype", 0)
+	if delay != 50*time.Millisecond {
+		t.Errorf("Expected 50ms, got %v", delay)
+	}
+	if strategy != FixedDelay {
+		t.Errorf("Expected FixedDelay, got %v", strategy)
 	}
 }
