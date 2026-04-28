@@ -18,16 +18,16 @@ Target: Go 1.26.2 standards (structure + code)
 
 ## Tier 3 — Package restructure
 
-- [ ] 3.1 Introduce `internal/` layout:
+- [x] 3.1 Introduce `internal/` layout:
   - `internal/auth/`
   - `internal/scenarios/`
   - `internal/handlers/`
   - `internal/openapi/`
-- [ ] 3.2 Replace `init()`-based plugin auto-registration with explicit wiring in `main.go`
-- [ ] 3.3 Eliminate mutable globals (`plugins`, auth vars) behind constructors
+- [x] 3.2 Replace `init()`-based plugin auto-registration with explicit wiring in `main.go`
+- [x] 3.3 Eliminate mutable globals (`plugins`, auth vars) behind constructors
 
 ## Tier 4 — Polish
 
-- [ ] 4.1 Raise CI coverage floor from 70% to 80% (CLAUDE.md states 80%)
-- [ ] 4.2 Add `.golangci.yml` with curated linter set
-- [ ] 4.3 Add round-trip tests for cursor encode/decode (after 1.1)
+- [x] 4.1 Raise CI coverage floor to 80% — total coverage is 82.2%
+- [x] 4.2 Add `.golangci.yml` with curated linter set
+- [x] 4.3 Cursor round-trip tests added in `internal/handlers/paginated_test.go`
