@@ -37,51 +37,43 @@ go build && go test -v                 # Build and test in sequence
 
 The server uses a plugin system where endpoints are registered via the `PayloadPlugin` interface:
 
-- Each handler (rest_payload_handler.go, streaming_payload_handler.go, paginated_payload_handler.go, documentation_handler.go) implements `PayloadPlugin`
-- Plugins self-register in their `init()` functions using `registerPlugin()`
-- Main server automatically discovers and registers all plugins with authentication middleware
+- All plugins are defined in `internal/handlers/` and implement the `PayloadPlugin` interface (`plugin.go`)
+- Plugins are explicitly wired in `main.go` — no `init()` auto-registration, no mutable globals
+- `main.go` builds the plugin slice, creates `auth.Config` via `auth.Setup()`, and registers routes using Go 1.22 method-routing (`"GET /path"`)
 - Each plugin provides its own OpenAPI specification via the `OpenAPISpec()` method
 
 ### Core Components
 
-**main.go**: Server bootstrap, plugin registration, and HTTP server setup
+**main.go**: Server bootstrap, explicit plugin wiring, and HTTP server setup
 
-- Manages the plugin registry and applies authentication middleware to all endpoints
+- Builds the plugin slice explicitly — no `init()` auto-registration, no mutable globals
+- Creates `auth.Config` via `auth.Setup()` and applies it as middleware per-route
+- Registers routes using Go 1.22 method-routing (`"GET /path"`)
 - Handles command-line flag parsing and server startup messaging
 
-**auth.go**: HTTP Basic Authentication system
+**internal/auth/auth.go**: HTTP Basic Authentication system
 
-- Provides `basicAuthMiddleware()` that wraps all endpoints
-- Handles credential generation, validation, and display
-- Uses constant-time comparison for security against timing attacks
+- `Config` struct returned by `auth.Setup(enabled, user, pass)`
+- `Config.Middleware(next)` wraps handler functions; uses constant-time comparison against timing attacks
+- `Config.ExampleURL(url)` and `Config.PrintInfo()` for startup display
 - Authentication is optional (controlled via `-auth` flag)
 
-**rest_payload_handler.go**: Single large response endpoint (`/rest_payload`)
+**internal/handlers/**: Endpoint plugins
 
-- Returns configurable number of JSON objects (default 10,000, max 1,000,000)
-- Uses `count` query parameter for customization
+- `plugin.go`: `PayloadPlugin` interface (`Path()`, `Handler()`, `OpenAPISpec()`)
+- `rest.go` / `RestPayloadPlugin`: Single large response endpoint (`/rest_payload`) — up to 1,000,000 objects
+- `streaming.go` / `StreamingPayloadPlugin{SM}`: Advanced streaming endpoint (`/stream_payload`) — fixed/random/progressive/burst delays, ServiceNow scenarios
+- `paginated.go` / `PaginatedPayloadPlugin{SM}`: Paginated REST endpoint (`/paginated_payload`) — limit/offset, page/size, cursor patterns; ServiceNow Data Stream compatible
+- `docs.go` / `DocumentationPlugin`: OpenAPI 3.1.1 JSON endpoint (`/openapi.json`); initialized via `Init(allPlugins, authCfg)`
+- `swagger.go` / `SwaggerUIPlugin`: Interactive Swagger UI (`/swagger`)
 
-**streaming_payload_handler.go**: Advanced streaming endpoint (`/stream_payload`)
+**internal/scenarios/**: Scenario management
 
-- Real-time JSON streaming with chunked transfer encoding
-- Supports multiple delay strategies (fixed, random, progressive, burst)
-- ServiceNow-specific simulation scenarios (peak_hours, maintenance, network_issues, database_load)
-- Configurable via query parameters: count, delay, strategy, scenario, batch_size, servicenow
+- `manager.go` / `Manager`: Loads embedded + user scenarios; `NewManager()` constructor; thread-safe
+- `validator.go` / `Validator`: JSON schema validation; `NewValidator()` constructor; `-verify` flag support
+- `embedded/`: Built-in scenario JSON files (peak_hours, maintenance, network_issues, database_load)
 
-**paginated_payload_handler.go**: Paginated REST endpoint (`/paginated_payload`)
-
-- Supports limit/offset, page/size, and cursor-based pagination patterns
-- Perfect for ServiceNow Data Stream action testing
-- Compatible response structure with pagination metadata
-- ServiceNow simulation scenarios (peak_hours, maintenance, network_issues, database_load)
-- Configurable via query parameters: total, limit, offset, page, size, cursor, servicenow, delay, scenario
-
-**documentation_handler.go**: OpenAPI 3.1.1 specification and Swagger UI endpoints
-
-- `/openapi.json`: Complete OpenAPI specification for all endpoints
-- `/swagger`: Interactive Swagger UI for API documentation and testing
-- Automatic collection of specifications from all registered plugins
-- CORS-enabled for cross-origin access to OpenAPI specification
+**internal/openapi/types.go**: OpenAPI 3.1.1 data structures shared across handlers
 
 ### ServiceNow Integration Focus
 
@@ -97,7 +89,7 @@ This server is specifically designed for ServiceNow REST integration testing:
 
 The application includes a sophisticated scenario management system:
 
-**scenario_manager.go**: Manages dynamic scenario loading and configuration
+**internal/scenarios/manager.go**: Manages dynamic scenario loading and configuration
 
 - Loads embedded scenarios from binary at startup (peak_hours, maintenance, network_issues, database_load)
 - Dynamically loads user scenarios from `$HOME/.config/payloadBuddy/scenarios/*.json`
@@ -105,7 +97,7 @@ The application includes a sophisticated scenario management system:
 - Provides scenario-based defaults for count, batch_size, ServiceNow mode, and max limits
 - Thread-safe scenario lookup and configuration management
 
-**scenario_validator.go**: Comprehensive JSON schema validation system
+**internal/scenarios/validator.go**: Comprehensive JSON schema validation system
 
 - Validates all scenarios against defined JSON schema (version 1.0.0)
 - Supports validation via `-verify` command-line flag for testing scenario files
@@ -120,10 +112,10 @@ The application includes a sophisticated scenario management system:
 
 ### Authentication Flow
 
-1. Command-line flags parsed in main()
-2. `setupAuthentication()` configures credentials (auto-generated or custom)
-3. `basicAuthMiddleware()` wraps API endpoints (excludes documentation endpoints)
-4. Credentials displayed on startup for development use
+1. Command-line flags parsed in `main()`
+2. `auth.Setup(enabled, user, pass)` returns an `auth.Config` (credentials auto-generated when not specified)
+3. `authCfg.Middleware(handler)` wraps each API endpoint individually; documentation endpoints skip this wrapper
+4. `authCfg.PrintInfo()` displays credentials on startup for development use
 5. API endpoints protected when `-auth` flag is used (documentation endpoints remain public)
 
 ### Authentication Exclusions
@@ -139,8 +131,8 @@ Tests are structured to handle multiple dimensions of functionality:
 
 **Authentication Testing:**
 
-- Set `*enableAuth = false` to disable auth in tests
-- Use `basicAuthMiddleware()` wrapper for testing auth scenarios
+- Use `auth.Setup(false, "", "")` for tests that don't need authentication
+- Use `auth.Setup(true, "user", "pass").Middleware(handler)` to test auth-protected endpoints
 - Test both authenticated and non-authenticated endpoint access
 
 **Scenario Testing:**
@@ -167,12 +159,12 @@ PayloadBuddy follows Robert C. Martin's Clean Code practices:
 
 **Meaningful Names:**
 
-- Functions have intention-revealing names: `setupPort()`, `validateScenarioFile()`, `PaginatedPayloadHandler()`
-- Variables clearly express their purpose: `scenarioManager`, `defaultServiceNowMode`, `maxCount`
+- Functions have intention-revealing names: `setupPort()`, `validateScenarioFile()`, `NewPaginatedHandler()`
+- Variables clearly express their purpose: `sm` (scenario manager), `defaultServiceNowMode`, `maxCount`
 
 **Single Responsibility Principle:**
 
-- Each file has a focused purpose: `auth.go` (authentication), `scenario_manager.go` (scenario management)
+- Each file has a focused purpose: `internal/auth/auth.go` (authentication), `internal/scenarios/manager.go` (scenario management)
 - Functions do one thing well: `setupPort()` only handles port validation and defaults
 - Clear separation of concerns across all modules
 
@@ -190,7 +182,7 @@ PayloadBuddy follows Robert C. Martin's Clean Code practices:
 
 **Comprehensive Testing:**
 
-- High test coverage (≥75% required by CI)
+- High test coverage (≥80% required by CI)
 - Descriptive test names that explain behavior
 - Table-driven tests for multiple scenarios
 
@@ -255,7 +247,7 @@ These principles work together to ensure high-quality, maintainable code:
 - **Clean Code** principles guide implementation decisions and code structure
 - **Unix Philosophy** ensures the tool integrates well with existing workflows and tools
 - **TDD** (covered below) validates behavior and supports refactoring with confidence
-- **Comprehensive testing** (≥70% coverage) maintains quality standards
+- **Comprehensive testing** (≥80% coverage) maintains quality standards
 - **Professional documentation** supports long-term maintenance and collaboration
 
 ## Test-Driven Development (TDD) Workflow
@@ -331,7 +323,7 @@ func TestNewDelayStrategy(t *testing.T) {
 
 ```bash
 # 1. RED: Write failing test
-# Add test for ExponentialDelay in streaming_payload_handler_test.go
+# Add test for ExponentialDelay in internal/handlers/streaming_test.go
 
 # 2. GREEN: Minimal implementation
 # Add ExponentialDelay constant and case in getDelayStrategy()

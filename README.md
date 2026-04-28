@@ -528,16 +528,13 @@ For detailed development guidelines, plugin creation, and contribution workflow,
 
 ### Project Structure
 ```
-├── main.go                          # Server setup and plugin registration
-├── *_payload_handler.go             # Endpoint implementations
-├── auth.go                          # Authentication middleware
-├── documentation_handler.go         # OpenAPI spec and Swagger UI
-├── scenario_manager.go              # Dynamic scenario loading and management
-├── scenario_validator.go            # JSON schema validation for scenarios
-├── scenarios/                       # Embedded scenario JSON files and schema
-│   ├── *.json                       # Built-in scenario configurations
-│   └── scenario_schema_v1.0.0.json  # JSON schema for validation
-├── *_test.go                        # Comprehensive test suite
+├── main.go                          # Server bootstrap and explicit plugin wiring
+├── internal/
+│   ├── auth/                        # HTTP Basic Authentication
+│   ├── handlers/                    # Endpoint plugins (rest, streaming, paginated, docs, swagger)
+│   ├── openapi/                     # OpenAPI 3.1.1 data structures
+│   └── scenarios/                   # Scenario management, validation, and embedded JSON
+├── *_test.go                        # Root-level integration tests
 ├── .github/workflows/               # CI/CD automation
 ├── README.md                        # User documentation
 ├── CONTRIBUTING.md                  # Development guidelines
