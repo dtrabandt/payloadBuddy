@@ -623,3 +623,53 @@ func TestPaginatedPayloadHandlerScenarios(t *testing.T) {
 		})
 	}
 }
+
+func TestCursorRoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		startID int
+	}{
+		{"zero start", 0},
+		{"mid page", 50},
+		{"large offset", 999900},
+		{"small start", 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cursor := createCursor(tt.startID)
+			gotID, gotLimit := parseCursor(cursor, 100)
+
+			if gotID != tt.startID {
+				t.Errorf("startID: got %d, want %d", gotID, tt.startID)
+			}
+			if gotLimit != 100 {
+				t.Errorf("limit: got %d, want 100", gotLimit)
+			}
+		})
+	}
+}
+
+func TestParseCursorInvalid(t *testing.T) {
+	tests := []struct {
+		name         string
+		cursor       string
+		defaultLimit int
+	}{
+		{"empty cursor", "", 50},
+		{"garbage", "not-valid-base64!!!", 50},
+		{"valid base64 invalid json", "dGhpcyBpcyBub3QganNvbg==", 75},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotID, gotLimit := parseCursor(tt.cursor, tt.defaultLimit)
+			if gotID != 0 {
+				t.Errorf("expected id=0 for invalid cursor, got %d", gotID)
+			}
+			if gotLimit != tt.defaultLimit {
+				t.Errorf("expected default limit %d, got %d", tt.defaultLimit, gotLimit)
+			}
+		})
+	}
+}

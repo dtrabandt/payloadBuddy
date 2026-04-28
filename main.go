@@ -58,16 +58,16 @@ func verifyScenarioFile(filePath string) {
 	validator.ValidateScenarioFile(filePath)
 }
 
-// registerPlugins registers all plugins with conditional authentication middleware
+// registerPlugins registers all plugins with conditional authentication middleware.
+// Documentation endpoints are public; all others require auth when enabled.
 func registerPlugins() {
 	for _, p := range plugins {
 		path := p.Path()
-		// Exclude documentation endpoints from authentication for better UX
 		if path == "/swagger" || path == "/openapi.json" {
-			http.HandleFunc(path, p.Handler())
+			http.HandleFunc("GET "+path, p.Handler())
 			fmt.Printf("Registered endpoint: %s (no auth)\n", path)
 		} else {
-			http.HandleFunc(path, basicAuthMiddleware(p.Handler()))
+			http.HandleFunc("GET "+path, basicAuthMiddleware(p.Handler()))
 			fmt.Printf("Registered endpoint: %s\n", path)
 		}
 	}

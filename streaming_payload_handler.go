@@ -316,12 +316,11 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	// Stream items
-	for i := 0; i < count; i++ {
+	for i := range count {
 		// Check for client cancellation
 		select {
 		case <-ctx.Done():
-			// Client disconnected, clean exit
-			_, _ = w.Write([]byte("\n]"))
+			_, _ = w.Write([]byte("\n]")) // best-effort close; client may already be gone
 			return
 		default:
 		}
@@ -366,8 +365,7 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Apply delay
 		if err := applyDelay(ctx, strategy, baseDelay, scenario, i); err != nil {
-			// Context cancelled during delay
-			_, _ = w.Write([]byte("\n]"))
+			_, _ = w.Write([]byte("\n]")) // best-effort close; client may already be gone
 			return
 		}
 
@@ -377,8 +375,7 @@ func StreamingPayloadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Close JSON array
-	_, _ = w.Write([]byte("\n]"))
+	_, _ = w.Write([]byte("\n]")) // best-effort close; connection may drop on large payloads
 	flusher.Flush()
 }
 

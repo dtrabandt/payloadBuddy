@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -279,18 +280,19 @@ func createCursor(startID int) string {
 	return base64Encode(string(data))
 }
 
-// Simple base64 encoding/decoding helpers
 func base64Encode(data string) string {
-	// Simple implementation - in production, use encoding/base64
-	return fmt.Sprintf("cursor_%d", len(data)) // Simplified for demo
+	return base64.URLEncoding.EncodeToString([]byte(data))
 }
 
 func base64Decode(cursor string) (string, error) {
-	// Simple implementation - in production, use encoding/base64
 	if cursor == "" {
 		return "", fmt.Errorf("empty cursor")
 	}
-	return "{\"id\":0,\"limit\":100}", nil // Simplified for demo
+	decoded, err := base64.URLEncoding.DecodeString(cursor)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
 }
 
 // Plugin registration

@@ -4,10 +4,11 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -137,9 +138,9 @@ func getScenarioPath() string {
 	// Create directory if it doesn't exist
 	if _, err := os.Stat(scenarioPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(scenarioPath, 0750); err != nil {
-			log.Printf("Warning: Failed to create scenario directory %s: %v", scenarioPath, err)
+			slog.Warn("failed to create scenario directory", "path", scenarioPath, "err", err)
 		} else {
-			log.Printf("Created scenario directory: %s", scenarioPath)
+			slog.Info("created scenario directory", "path", scenarioPath)
 		}
 	}
 
@@ -150,7 +151,7 @@ func getScenarioPath() string {
 func (sm *ScenarioManager) loadEmbeddedScenarios() {
 	entries, err := embeddedScenarios.ReadDir("scenarios")
 	if err != nil {
-		log.Printf("Warning: Failed to read embedded scenarios: %v", err)
+		slog.Warn("failed to read embedded scenarios", "err", err)
 		return
 	}
 
@@ -158,25 +159,23 @@ func (sm *ScenarioManager) loadEmbeddedScenarios() {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") && entry.Name() != "scenario_schema_v1.0.0.json" {
 			content, err := embeddedScenarios.ReadFile(filepath.Join("scenarios", entry.Name()))
 			if err != nil {
-				log.Printf("Warning: Failed to read embedded scenario %s: %v", entry.Name(), err)
+				slog.Warn("failed to read embedded scenario", "file", entry.Name(), "err", err)
 				continue
 			}
 
-			// Validate and parse scenario
 			scenario, err := sm.validator.ValidateJSON(content)
 			if err != nil {
-				log.Printf("Warning: Validation failed for embedded scenario %s: %v", entry.Name(), err)
+				slog.Warn("validation failed for embedded scenario", "file", entry.Name(), "err", err)
 				continue
 			}
 
-			// Validate compatibility
 			if !sm.isCompatible(scenario) {
-				log.Printf("Warning: Embedded scenario %s is not compatible with current version", scenario.ScenarioName)
+				slog.Warn("embedded scenario not compatible with current version", "name", scenario.ScenarioName)
 				continue
 			}
 
 			sm.scenarios[scenario.ScenarioType] = scenario
-			log.Printf("Loaded embedded scenario: %s (%s)", scenario.ScenarioName, scenario.ScenarioType)
+			slog.Info("loaded embedded scenario", "name", scenario.ScenarioName, "type", scenario.ScenarioType)
 		}
 	}
 }
@@ -199,44 +198,41 @@ func (sm *ScenarioManager) loadUserScenarios() {
 			userPathAbs, _ := filepath.Abs(sm.userPath)
 			pathAbs, _ := filepath.Abs(cleanPath)
 			if !strings.HasPrefix(pathAbs, userPathAbs) {
-				log.Printf("Warning: Skipping file outside user directory: %s", path)
+				slog.Warn("skipping file outside user directory", "path", path)
 				return nil
 			}
 
 			content, err := os.ReadFile(cleanPath)
 			if err != nil {
-				log.Printf("Warning: Failed to read user scenario %s: %v", cleanPath, err)
-				return nil // Continue with next file
-			}
-
-			// Validate and parse scenario
-			scenario, err := sm.validator.ValidateJSON(content)
-			if err != nil {
-				log.Printf("Warning: Validation failed for user scenario %s: %v", path, err)
-				return nil // Continue with next file
-			}
-
-			// Validate compatibility
-			if !sm.isCompatible(scenario) {
-				log.Printf("Warning: User scenario %s is not compatible with current version", scenario.ScenarioName)
+				slog.Warn("failed to read user scenario", "path", cleanPath, "err", err)
 				return nil
 			}
 
-			// User scenarios override embedded ones with same scenario_type
+			scenario, err := sm.validator.ValidateJSON(content)
+			if err != nil {
+				slog.Warn("validation failed for user scenario", "path", path, "err", err)
+				return nil
+			}
+
+			if !sm.isCompatible(scenario) {
+				slog.Warn("user scenario not compatible with current version", "name", scenario.ScenarioName)
+				return nil
+			}
+
 			if existing, exists := sm.scenarios[scenario.ScenarioType]; exists {
-				log.Printf("User scenario %s (%s) overriding embedded scenario %s",
-					scenario.ScenarioName, scenario.ScenarioType, existing.ScenarioName)
+				slog.Info("user scenario overriding embedded scenario",
+					"name", scenario.ScenarioName, "type", scenario.ScenarioType, "replaced", existing.ScenarioName)
 			}
 
 			sm.scenarios[scenario.ScenarioType] = scenario
-			log.Printf("Loaded user scenario: %s (%s)", scenario.ScenarioName, scenario.ScenarioType)
+			slog.Info("loaded user scenario", "name", scenario.ScenarioName, "type", scenario.ScenarioType)
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		log.Printf("Warning: Error scanning user scenarios: %v", err)
+		slog.Warn("error scanning user scenarios", "err", err)
 	}
 }
 
@@ -263,12 +259,13 @@ func (sm *ScenarioManager) GetScenario(scenarioType string) *Scenario {
 	return sm.scenarios[scenarioType]
 }
 
-// ListScenarios returns all available scenario types
+// ListScenarios returns all available scenario types in sorted order.
 func (sm *ScenarioManager) ListScenarios() []string {
-	var types []string
+	types := make([]string, 0, len(sm.scenarios))
 	for scenarioType := range sm.scenarios {
 		types = append(types, scenarioType)
 	}
+	slices.Sort(types)
 	return types
 }
 
