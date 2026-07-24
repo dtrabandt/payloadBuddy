@@ -65,12 +65,19 @@ The server uses a plugin system where endpoints are registered via the `PayloadP
 - `streaming.go` / `StreamingPayloadPlugin{SM}`: Advanced streaming endpoint (`/stream_payload`) — fixed/random/progressive/burst delays, ServiceNow scenarios
 - `paginated.go` / `PaginatedPayloadPlugin{SM}`: Paginated REST endpoint (`/paginated_payload`) — limit/offset, page/size, cursor patterns; ServiceNow Data Stream compatible
 - `docs.go` / `DocumentationPlugin`: OpenAPI 3.1.1 JSON endpoint (`/openapi.json`); initialized via `Init(allPlugins, authCfg)`
-- `swagger.go` / `SwaggerUIPlugin`: Interactive Swagger UI (`/swagger`)
+- `docs.go` / `SwaggerUIPlugin`: Interactive Swagger UI (`/swagger`); the CDN assets carry SRI hashes, so bumping the swagger-ui-dist version means recomputing them
+- `helpers.go` / `queryParser`: typed query-parameter parsing shared by all endpoints
+
+**Query parameter convention**: endpoints parse parameters through `newQueryParser(r)`, then
+check `q.Err()` once and return **HTTP 400** before writing any output. Invalid input is never
+silently replaced by a default — that hid client bugs behind plausible-looking 200s, and both
+panics found in the 2026-07-24 review reached the handler that way. New endpoints should
+follow the same shape and document a `400` response in their `OpenAPISpec()`.
 
 **internal/scenarios/**: Scenario management
 
 - `manager.go` / `Manager`: Loads embedded + user scenarios; `NewManager()` constructor; thread-safe
-- `validator.go` / `Validator`: JSON schema validation; `NewValidator()` constructor; `-verify` flag support
+- `validator.go` / `Validator`: validates against the embedded `scenario_schema_v1.0.0.json` (via `gojsonschema`) and then the struct-level rules; `NewValidator()` constructor; `-verify` flag support. Keep the two in sync — they drifted apart once already
 - `embedded/`: Built-in scenario JSON files (peak_hours, maintenance, network_issues, database_load)
 
 **internal/openapi/types.go**: OpenAPI 3.1.1 data structures shared across handlers

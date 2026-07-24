@@ -12,6 +12,13 @@ import (
 	"github.com/dtrabandt/payloadBuddy/internal/scenarios"
 )
 
+const (
+	// maxPageSize caps how many items a single request may return, whatever the
+	// pagination style. defaultPageSize is used when a requested size is unusable.
+	maxPageSize     = 1000
+	defaultPageSize = 100
+)
+
 // PaginatedItem represents a single object in a paginated response.
 type PaginatedItem struct {
 	ID        int       `json:"id"`
@@ -67,18 +74,20 @@ func NewPaginatedHandler(sm *scenarios.Manager) http.HandlerFunc {
 			defaultBatchSize = 100
 		}
 
-		totalCount := getIntParam(r, "total", defaultCount)
-		limit := getIntParam(r, "limit", defaultBatchSize)
-		offset := getIntParam(r, "offset", 0)
-		page := getIntParam(r, "page", 1)
-		size := getIntParam(r, "size", defaultBatchSize)
+		q := newQueryParser(r)
+		totalCount := q.Int("total", defaultCount)
+		limit := q.Int("limit", defaultBatchSize)
+		offset := q.Int("offset", 0)
+		page := q.Int("page", 1)
+		size := q.Int("size", defaultBatchSize)
+		snMode := q.Bool("servicenow", defaultSNMode)
+		delay := q.Duration("delay", 0)
 		cursor := r.URL.Query().Get("cursor")
 
-		snMode := defaultSNMode
-		if v := r.URL.Query().Get("servicenow"); v != "" {
-			snMode = v == "true"
+		if err := q.Err(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-		delay := getDurationParam(r, "delay", 0)
 
 		if totalCount <= 0 || totalCount > maxCount {
 			http.Error(w, fmt.Sprintf("Total count must be between 1 and %d", maxCount), http.StatusBadRequest)
@@ -106,8 +115,8 @@ func NewPaginatedHandler(sm *scenarios.Manager) http.HandlerFunc {
 			if page < 1 {
 				page = 1
 			}
-			if size <= 0 || size > 1000 {
-				size = 100
+			if size <= 0 || size > maxPageSize {
+				size = defaultPageSize
 			}
 			startIndex = (page - 1) * size
 			pageSize = size
@@ -116,11 +125,21 @@ func NewPaginatedHandler(sm *scenarios.Manager) http.HandlerFunc {
 			if offset < 0 {
 				offset = 0
 			}
-			if limit <= 0 || limit > 1000 {
-				limit = 100
+			if limit <= 0 || limit > maxPageSize {
+				limit = defaultPageSize
 			}
 			startIndex = offset
 			pageSize = limit
+		}
+
+		// Applied to every pagination style, not just page/offset: a cursor carries an
+		// attacker-controlled page size, and parseCursor falls back to the raw ?limit
+		// whenever the cursor cannot be decoded.
+		if pageSize <= 0 || pageSize > maxPageSize {
+			pageSize = defaultPageSize
+		}
+		if startIndex < 0 {
+			startIndex = 0
 		}
 
 		if startIndex >= totalCount {
@@ -208,10 +227,10 @@ func parseCursor(cursor string, defaultLimit int) (int, int) {
 		return 0, defaultLimit
 	}
 	lim := cd.Limit
-	if lim <= 0 || lim > 1000 {
+	if lim <= 0 || lim > maxPageSize {
 		lim = defaultLimit
 	}
-	return cd.ID, lim
+	return max(cd.ID, 0), lim
 }
 
 func createCursor(startID int) string {

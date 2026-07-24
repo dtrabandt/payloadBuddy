@@ -209,8 +209,8 @@ func TestSwaggerUIHandler_HTMLResponse(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", rr.Code)
 	}
-	if ct := rr.Header().Get("Content-Type"); ct != "text/html" {
-		t.Errorf("Expected Content-Type text/html, got %s", ct)
+	if ct := rr.Header().Get("Content-Type"); ct != "text/html; charset=utf-8" {
+		t.Errorf("Expected Content-Type text/html; charset=utf-8, got %s", ct)
 	}
 	body := rr.Body.String()
 	for _, element := range []string{

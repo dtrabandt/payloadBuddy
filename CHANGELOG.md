@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two unauthenticated panics in `/stream_payload`**:
+
+  - `batch_size=0` (or negative) caused an integer divide by zero that aborted the
+    response mid-stream; batch sizes below 1 are now rejected with HTTP 400
+  - `strategy=random` combined with `delay=0` or a negative delay panicked inside
+    `crypto/rand.Int`; a non-positive base delay now skips the delay, and negative
+    durations are rejected with HTTP 400
+
+- **Cursor pagination ignored the page-size cap**: the `cursor` branch of
+  `/paginated_payload` applied no limit, and an undecodable cursor fell back to the raw
+  `limit` query parameter, so a single request could return 1,000,000 items (~182 MB).
+  Page size is now clamped to 1..1000 for every pagination style, and a cursor carrying
+  a negative offset no longer produces negative item IDs.
+
+- **Streamed responses were truncated into invalid JSON**: the server-wide 30 s
+  `WriteTimeout` cut every stream longer than 30 seconds short, returning HTTP 200 with
+  no closing `]` — the documented default (`count=10000&delay=10ms`) could never
+  complete. `WriteTimeout` is now disabled; cancellation is handled by the request
+  context, and `ReadHeaderTimeout` still bounds request headers.
+
+- **Scenario validation diverged from the shipped JSON schema**: scenarios are now
+  validated against the embedded `scenario_schema_v1.0.0.json` (which was previously
+  embedded but never used), so `batch_size` limits and unknown properties are enforced.
+  Files setting `performance_monitoring` or `error_injection` without the optional
+  `metrics_interval` / `consecutive_error_limit` are no longer rejected. The delay-format
+  regex is now anchored on both alternatives, so `"100msJUNK"`, `"garbage100"` and
+  `"-5"` are rejected.
+
+- **Released binaries reported the wrong version**: the release workflow set
+  `-X main.version`, but the variable is `main.Version`, so every published binary
+  reported `0.3.0` regardless of its tag.
+
+### Changed
+
+- **Invalid query parameters now return HTTP 400 instead of being silently ignored.**
+  This affects all three data endpoints. Most visibly, `/rest_payload?count=abc`,
+  `count=-5` and `count=99999999` previously returned HTTP 200 with the 10,000-item
+  default; they now return 400, matching what the endpoint's OpenAPI specification has
+  always advertised and what `/stream_payload` and `/paginated_payload` already did.
+  `servicenow=` now accepts any Go boolean literal and rejects anything else, where
+  previously any value other than `true` silently meant `false`.
+
+### Documentation
+
+- The "complete example" in `SCENARIOS.md` placed `spike_probability` inside
+  `delay_overrides`, whose values must be delays — the file has never validated. Moved to
+  `timing_patterns.thresholds`. All complete examples in `SCENARIOS.md` were re-checked with
+  `-verify` against the now-enforced schema.
+- `SCENARIOS.md` documents what the schema enforces (unknown properties rejected, delay
+  formats, optional fields with defaults); `README.md` documents the HTTP 400 behaviour.
+
+### Security
+
+- Swagger UI now loads its three `swagger-ui-dist@5.9.0` assets with Subresource
+  Integrity hashes and `crossorigin="anonymous"`, so a compromised CDN response cannot
+  execute. `/swagger` also sends `Content-Type: text/html; charset=utf-8`.
+
 ## [v0.3.0] - 2025-08-06
 
 ### Added

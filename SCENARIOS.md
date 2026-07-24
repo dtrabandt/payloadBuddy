@@ -225,6 +225,34 @@ Validation failed:
 scenario_name is required
 ```
 
+Files are checked against the JSON schema embedded in the binary
+(`scenario_schema_v1.0.0.json`) before the field-level rules run, so schema violations are
+reported first and look like this:
+
+```
+Validating scenario file: invalid-scenario.json
+Validation failed:
+schema validation failed: (root): Additional property bogus_key is not allowed
+```
+
+### What the schema enforces
+
+- **Unknown properties are rejected.** A misspelled key such as `batch_sze` is an error, not
+  a silently ignored field — this is the most common cause of a scenario that "loads but does
+  nothing".
+- **`batch_size` must be between 1 and 10000**, and `max_count` / `default_count` between 1
+  and 1,000,000.
+- **`base_delay` and every value in `delay_overrides` must be a delay** — a Go duration with
+  a unit (`"25ms"`, `"2s"`) or a whole number of milliseconds (`"100"`). A bare decimal such
+  as `"0.15"` is not a delay; probabilities and thresholds belong in
+  `timing_patterns.thresholds` or `simulation_config`.
+- **Optional fields may be omitted.** `metrics_interval` and `consecutive_error_limit` fall
+  back to their schema defaults, so
+  `"performance_monitoring": {"enabled": true}` is a valid, complete block.
+
+A file that fails validation is skipped at startup with a warning in the log, so use
+`-verify` before deploying rather than discovering the omission through a missing scenario.
+
 ### Best Practices
 
 1. **Validate Early**: Always validate scenario files before deploying
@@ -367,15 +395,15 @@ Here's a comprehensive scenario showcasing all features:
     "scenario_parameters": {
         "delay_overrides": {
             "initial_delay": "25ms",
-            "max_delay": "2s",
-            "spike_probability": "0.15"
+            "max_delay": "2s"
         },
         "timing_patterns": {
             "intervals": [500, 1000, 2500],
             "probabilities": [0.2, 0.3, 0.5],
             "thresholds": {
                 "warning_threshold": 10000,
-                "critical_threshold": 40000
+                "critical_threshold": 40000,
+                "spike_probability": 0.15
             }
         },
         "simulation_config": {

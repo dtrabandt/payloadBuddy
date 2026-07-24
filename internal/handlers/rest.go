@@ -2,10 +2,16 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/dtrabandt/payloadBuddy/internal/openapi"
+)
+
+const (
+	defaultRestCount = 10000
+	maxRestCount     = 1000000
 )
 
 // Item represents a single object in the REST payload response.
@@ -22,13 +28,18 @@ func (RestPayloadPlugin) Handler() http.HandlerFunc { return RestPayloadHandler 
 
 // RestPayloadHandler handles GET /rest_payload — returns a large JSON array.
 func RestPayloadHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	count := 10000
-	if val := r.URL.Query().Get("count"); val != "" {
-		if parsed, err := strconv.Atoi(val); err == nil && parsed > 0 && parsed <= 1000000 {
-			count = parsed
-		}
+	q := newQueryParser(r)
+	count := q.Int("count", defaultRestCount)
+	if err := q.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+	if count <= 0 || count > maxRestCount {
+		http.Error(w, fmt.Sprintf("Count must be between 1 and %d", maxRestCount), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	data := make([]Item, count)
 	for i := 1; i <= count; i++ {
 		data[i-1] = Item{ID: i, Name: "Object " + strconv.Itoa(i)}
@@ -78,6 +89,12 @@ func (RestPayloadPlugin) OpenAPISpec() openapi.PathSpec {
 								},
 								Example: []Item{{ID: 1, Name: "Object 1"}, {ID: 2, Name: "Object 2"}},
 							},
+						},
+					},
+					"400": {
+						Description: "Bad request — invalid count parameter",
+						Content: map[string]openapi.OpenAPIMediaType{
+							"text/plain": {Schema: &openapi.OpenAPISchema{Type: "string", Example: "Count must be between 1 and 1000000"}},
 						},
 					},
 					"500": {

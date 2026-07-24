@@ -49,18 +49,26 @@ func NewStreamingHandler(sm *scenarios.Manager) http.HandlerFunc {
 			defaultBatchSize = 100
 		}
 
-		count := getIntParam(r, "count", defaultCount)
-		baseDelay := getDurationParam(r, "delay", 10*time.Millisecond)
+		q := newQueryParser(r)
+		count := q.Int("count", defaultCount)
+		baseDelay := q.Duration("delay", 10*time.Millisecond)
+		batchSize := q.Int("batch_size", defaultBatchSize)
+		snMode := q.Bool("servicenow", defaultSNMode)
 		strategy := getDelayStrategy(r)
-		batchSize := getIntParam(r, "batch_size", defaultBatchSize)
 
-		snMode := defaultSNMode
-		if v := r.URL.Query().Get("servicenow"); v != "" {
-			snMode = v == "true"
+		if err := q.Err(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		if count <= 0 || count > maxCount {
 			http.Error(w, fmt.Sprintf("Count must be between 1 and %d", maxCount), http.StatusBadRequest)
+			return
+		}
+
+		// batchSize drives "i%batchSize" below; zero or negative would panic.
+		if batchSize < 1 {
+			http.Error(w, "Batch size must be 1 or greater", http.StatusBadRequest)
 			return
 		}
 
@@ -185,6 +193,10 @@ func applyDelay(ctx context.Context, strategy scenarios.DelayStrategy, baseDelay
 			case scenarios.FixedDelay:
 				delay = baseDelay
 			case scenarios.RandomDelay:
+				// secureRandInt63n panics for a bound <= 0; nothing to randomise anyway.
+				if baseDelay <= 0 {
+					return nil
+				}
 				randInt64, err := secureRandInt63n(int64(baseDelay * 2))
 				if err != nil {
 					delay = baseDelay
@@ -232,6 +244,7 @@ func (StreamingPayloadPlugin) OpenAPISpec() openapi.PathSpec {
 				},
 				Responses: map[string]openapi.OpenAPIResponse{
 					"200": {Description: "Successful streaming response with JSON array"},
+					"400": {Description: "Bad request — invalid parameters"},
 					"500": {Description: "Internal server error"},
 				},
 			},

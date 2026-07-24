@@ -41,7 +41,7 @@
     "base_delay": {
       "type": "string",
       "description": "Base delay between items in Go duration format (e.g., '100ms', '1s') or milliseconds",
-      "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$"
+      "pattern": "^\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h)$|^\\d+$"
     },
     "delay_strategy": {
       "type": "string",
@@ -97,7 +97,7 @@
           "patternProperties": {
             "^[a-zA-Z][a-zA-Z0-9_]*$": {
               "type": "string",
-              "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$"
+              "pattern": "^\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h)$|^\\d+$"
             }
           }
         },
@@ -275,7 +275,7 @@
         "recovery_delay": {
           "type": "string",
           "description": "Delay before resuming normal operation after error",
-          "pattern": "^(\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h))|\\d+$",
+          "pattern": "^\\d+(\\.\\d+)?(ns|us|μs|ms|s|m|h)$|^\\d+$",
           "default": "1s"
         },
         "consecutive_error_limit": {

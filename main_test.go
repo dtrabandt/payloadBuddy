@@ -1,9 +1,18 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/dtrabandt/payloadBuddy/internal/auth"
+	"github.com/dtrabandt/payloadBuddy/internal/handlers"
 	"github.com/dtrabandt/payloadBuddy/internal/scenarios"
 )
 
@@ -134,11 +143,81 @@ func TestRegisterPluginsAndStart_PortLogic(t *testing.T) {
 	*paramPort = "8080" // restore default
 }
 
-func TestStartHTTPServer_Configuration(t *testing.T) {
-	t.Skip("startHTTPServer calls ListenAndServe which blocks — covered by integration tests")
+// TestNewHTTPServer_Timeouts covers CODE_REVIEW #4: a 30s WriteTimeout truncated every
+// stream longer than that into an HTTP 200 with malformed JSON.
+func TestNewHTTPServer_Timeouts(t *testing.T) {
+	server := newHTTPServer("8080", http.NewServeMux())
+
+	if server.WriteTimeout != 0 {
+		t.Errorf("WriteTimeout must stay disabled so streams are not truncated, got %v", server.WriteTimeout)
+	}
+	if server.ReadHeaderTimeout != 10*time.Second {
+		t.Errorf("Expected ReadHeaderTimeout 10s, got %v", server.ReadHeaderTimeout)
+	}
+	if server.IdleTimeout != 120*time.Second {
+		t.Errorf("Expected IdleTimeout 120s, got %v", server.IdleTimeout)
+	}
+	if server.Addr != ":8080" {
+		t.Errorf("Expected addr :8080, got %s", server.Addr)
+	}
 }
 
-// isValidHTTPPath checks that a path is a valid HTTP endpoint path.
-func isValidHTTPPath(path string) bool {
-	return len(path) > 0 && path[0] == '/'
+// TestStreamTerminatesUnderRealServer covers CODE_REVIEW #4 end to end. Every other
+// streaming test uses httptest.NewRecorder(), which has no write deadline — which is
+// exactly why a truncated stream was invisible to CI. This one runs a real
+// http.Server configured by newHTTPServer and streams for longer than the write
+// deadline used to be.
+func TestStreamTerminatesUnderRealServer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long streaming test in short mode")
+	}
+
+	sm := scenarios.NewManager()
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /stream_payload", handlers.StreamingPayloadPlugin{SM: sm}.Handler())
+
+	ts := httptest.NewUnstartedServer(mux)
+	configured := newHTTPServer("0", mux)
+	ts.Config.ReadHeaderTimeout = configured.ReadHeaderTimeout
+	ts.Config.ReadTimeout = configured.ReadTimeout
+	ts.Config.WriteTimeout = configured.WriteTimeout
+	ts.Config.IdleTimeout = configured.IdleTimeout
+	ts.Start()
+	defer ts.Close()
+
+	// 4000 items at 10ms is ~40s of streaming — past the 30s deadline that used to
+	// cut the response off after roughly 2,900 items.
+	const wantItems = 4000
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	url := fmt.Sprintf("%s/stream_payload?count=%d&delay=10ms", ts.URL, wantItems)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read the stream: %v", err)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(string(body)), "]") {
+		t.Error("Stream was truncated: body does not end with a closing ']'")
+	}
+
+	var items []map[string]any
+	if err := json.Unmarshal(body, &items); err != nil {
+		t.Fatalf("Stream is not valid JSON: %v", err)
+	}
+	if len(items) != wantItems {
+		t.Errorf("Expected %d items, got %d", wantItems, len(items))
+	}
 }

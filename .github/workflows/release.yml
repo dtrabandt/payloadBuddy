@@ -98,7 +98,7 @@ jobs:
           
           # Build
           echo "Building for $GOOS/$GOARCH..."
-          GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o "dist/${binary_name}" .
+          GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w -X main.Version=${{ steps.version.outputs.version }}" -o "dist/${binary_name}" .
           
           # Create archive
           archive_name="payloadBuddy-${{ steps.version.outputs.version }}-${GOOS}-${GOARCH}"

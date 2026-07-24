@@ -138,15 +138,25 @@ func scenarioUsageContext(scenarioType string) string {
 	}
 }
 
-func startHTTPServer(port string, mux *http.ServeMux) {
-	server := &http.Server{
+// newHTTPServer builds the server with the timeouts appropriate for a payload
+// testing tool. WriteTimeout is deliberately disabled: /stream_payload responses
+// are unbounded by design, and a write deadline truncates them mid-array, leaving
+// the client with an HTTP 200 and malformed JSON. Cancellation is handled by the
+// streaming handler through the request context instead. ReadHeaderTimeout still
+// bounds how long a client may take to send its request headers.
+func newHTTPServer(port string, mux *http.ServeMux) *http.Server {
+	return &http.Server{
 		Addr:              ":" + port,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      0,
 		IdleTimeout:       120 * time.Second,
 	}
+}
+
+func startHTTPServer(port string, mux *http.ServeMux) {
+	server := newHTTPServer(port, mux)
 	fmt.Println("\nPress Ctrl+C to stop the server")
 	if err := server.ListenAndServe(); err != nil {
 		fmt.Fprintf(os.Stderr, "Server failed to start: %v\n", err)

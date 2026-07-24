@@ -220,55 +220,112 @@ func TestStreamingPayloadHandler_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestGetDurationParam(t *testing.T) {
+func TestQueryParserDuration(t *testing.T) {
 	tests := []struct {
 		name         string
 		paramValue   string
 		defaultValue time.Duration
 		expected     time.Duration
+		wantErr      bool
 	}{
-		{"empty uses default", "", 100 * time.Millisecond, 100 * time.Millisecond},
-		{"valid ms string", "250ms", 100 * time.Millisecond, 250 * time.Millisecond},
-		{"valid seconds", "2s", 100 * time.Millisecond, 2 * time.Second},
-		{"integer as ms", "500", 100 * time.Millisecond, 500 * time.Millisecond},
-		{"invalid uses default", "invalid", 200 * time.Millisecond, 200 * time.Millisecond},
-		{"negative integer", "-100", 50 * time.Millisecond, -100 * time.Millisecond},
+		{"empty uses default", "", 100 * time.Millisecond, 100 * time.Millisecond, false},
+		{"valid ms string", "250ms", 100 * time.Millisecond, 250 * time.Millisecond, false},
+		{"valid seconds", "2s", 100 * time.Millisecond, 2 * time.Second, false},
+		{"integer as ms", "500", 100 * time.Millisecond, 500 * time.Millisecond, false},
+		{"zero is allowed", "0", 100 * time.Millisecond, 0, false},
+		{"unparseable is rejected", "invalid", 200 * time.Millisecond, 200 * time.Millisecond, true},
+		{"negative integer is rejected", "-100", 50 * time.Millisecond, 50 * time.Millisecond, true},
+		{"negative duration is rejected", "-5ms", 50 * time.Millisecond, 50 * time.Millisecond, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/?delay="+tt.paramValue, nil)
-			result := getDurationParam(req, "delay", tt.defaultValue)
+			q := newQueryParser(req)
+			result := q.Duration("delay", tt.defaultValue)
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+			if gotErr := q.Err() != nil; gotErr != tt.wantErr {
+				t.Errorf("Expected error %v, got %v", tt.wantErr, q.Err())
 			}
 		})
 	}
 }
 
-func TestGetIntParam(t *testing.T) {
+func TestQueryParserInt(t *testing.T) {
 	tests := []struct {
 		name         string
 		paramValue   string
 		defaultValue int
 		expected     int
+		wantErr      bool
 	}{
-		{"empty uses default", "", 1000, 1000},
-		{"valid integer", "5000", 1000, 5000},
-		{"zero value", "0", 1000, 0},
-		{"negative value", "-100", 1000, -100},
-		{"invalid uses default", "invalid", 2000, 2000},
-		{"float uses default", "123.45", 500, 500},
+		{"empty uses default", "", 1000, 1000, false},
+		{"valid integer", "5000", 1000, 5000, false},
+		{"zero value", "0", 1000, 0, false},
+		{"negative value parses", "-100", 1000, -100, false},
+		{"unparseable is rejected", "invalid", 2000, 2000, true},
+		{"float is rejected", "123.45", 500, 500, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/?count="+tt.paramValue, nil)
-			result := getIntParam(req, "count", tt.defaultValue)
+			q := newQueryParser(req)
+			result := q.Int("count", tt.defaultValue)
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
+			if gotErr := q.Err() != nil; gotErr != tt.wantErr {
+				t.Errorf("Expected error %v, got %v", tt.wantErr, q.Err())
+			}
 		})
+	}
+}
+
+func TestQueryParserBool(t *testing.T) {
+	tests := []struct {
+		name         string
+		paramValue   string
+		defaultValue bool
+		expected     bool
+		wantErr      bool
+	}{
+		{"empty uses default", "", true, true, false},
+		{"true", "true", false, true, false},
+		{"false", "false", true, false, false},
+		{"unparseable is rejected", "yes-please", false, false, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/?servicenow="+tt.paramValue, nil)
+			q := newQueryParser(req)
+			result := q.Bool("servicenow", tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+			if gotErr := q.Err() != nil; gotErr != tt.wantErr {
+				t.Errorf("Expected error %v, got %v", tt.wantErr, q.Err())
+			}
+		})
+	}
+}
+
+// TestQueryParserKeepsFirstError verifies later parses cannot mask an earlier failure.
+func TestQueryParserKeepsFirstError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/?count=abc&batch_size=50", nil)
+	q := newQueryParser(req)
+	q.Int("count", 10)
+	q.Int("batch_size", 100)
+
+	err := q.Err()
+	if err == nil {
+		t.Fatal("Expected an error from the invalid count parameter")
+	}
+	if !strings.Contains(err.Error(), "count") {
+		t.Errorf("Expected the error to name the count parameter, got: %v", err)
 	}
 }
 
@@ -388,5 +445,102 @@ func TestStreamingPayloadPlugin_OpenAPISpec(t *testing.T) {
 		if _, exists := streamItemSchema.Properties[prop]; !exists {
 			t.Errorf("Missing property %s in StreamItem schema", prop)
 		}
+	}
+}
+
+// TestStreamingPayloadHandler_InvalidBatchSize covers CODE_REVIEW #1: batch_size
+// reached "i%batchSize" unvalidated, so a zero panicked with an integer divide by
+// zero and aborted the connection mid-response.
+func TestStreamingPayloadHandler_InvalidBatchSize(t *testing.T) {
+	sm := scenarios.NewManager()
+	handler := NewStreamingHandler(sm)
+
+	for _, batchSize := range []string{"0", "-1"} {
+		t.Run("batch_size="+batchSize, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/stream_payload?count=5&batch_size="+batchSize, nil)
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", w.Code)
+			}
+		})
+	}
+}
+
+// TestStreamingPayloadHandler_RandomStrategyZeroDelay covers CODE_REVIEW #2:
+// strategy=random with a zero or negative delay reached crypto/rand.Int with a
+// bound <= 0, which panics.
+func TestStreamingPayloadHandler_RandomStrategyZeroDelay(t *testing.T) {
+	sm := scenarios.NewManager()
+	handler := NewStreamingHandler(sm)
+
+	tests := []struct {
+		name     string
+		url      string
+		wantCode int
+	}{
+		{"zero delay completes", "/stream_payload?count=3&delay=0&strategy=random", http.StatusOK},
+		{"negative delay rejected", "/stream_payload?count=3&delay=-5ms&strategy=random", http.StatusBadRequest},
+		{"negative ms rejected", "/stream_payload?count=3&delay=-5&strategy=random", http.StatusBadRequest},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.url, nil)
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			if w.Code != tt.wantCode {
+				t.Errorf("Expected status %d, got %d", tt.wantCode, w.Code)
+			}
+			if tt.wantCode == http.StatusOK {
+				var items []StreamItem
+				if err := json.Unmarshal(w.Body.Bytes(), &items); err != nil {
+					t.Fatalf("Failed to parse JSON: %v", err)
+				}
+				if len(items) != 3 {
+					t.Errorf("Expected 3 items, got %d", len(items))
+				}
+			}
+		})
+	}
+}
+
+// TestApplyDelay_RandomStrategyNonPositiveBase guards the same panic at the
+// applyDelay level, which handlers are not the only caller of.
+func TestApplyDelay_RandomStrategyNonPositiveBase(t *testing.T) {
+	ctx := context.Background()
+
+	for _, baseDelay := range []time.Duration{0, -5 * time.Millisecond} {
+		if err := applyDelay(ctx, scenarios.RandomDelay, baseDelay, "", 0, nil); err != nil {
+			t.Errorf("Unexpected error for baseDelay %v: %v", baseDelay, err)
+		}
+	}
+}
+
+// TestStreamingPayloadHandler_InvalidParameters checks that unparseable values are
+// rejected rather than silently replaced by defaults.
+func TestStreamingPayloadHandler_InvalidParameters(t *testing.T) {
+	sm := scenarios.NewManager()
+	handler := NewStreamingHandler(sm)
+
+	urls := []string{
+		"/stream_payload?count=abc",
+		"/stream_payload?count=3&delay=notaduration",
+		"/stream_payload?count=3&batch_size=abc",
+		"/stream_payload?count=3&servicenow=maybe",
+	}
+
+	for _, u := range urls {
+		t.Run(u, func(t *testing.T) {
+			req := httptest.NewRequest("GET", u, nil)
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", w.Code)
+			}
+		})
 	}
 }

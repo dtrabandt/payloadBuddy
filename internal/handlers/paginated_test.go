@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -482,5 +483,106 @@ func BenchmarkPaginatedPayloadHandlerServiceNow(b *testing.B) {
 	for range b.N {
 		w := httptest.NewRecorder()
 		handler(w, req)
+	}
+}
+
+// TestPaginatedPayloadHandlerCursorPageSizeClamp covers CODE_REVIEW #3: the cursor
+// branch performed no clamping, and parseCursor falls back to the raw ?limit when the
+// cursor cannot be decoded — so one GET could return 1,000,000 items / 182 MB.
+func TestPaginatedPayloadHandlerCursorPageSizeClamp(t *testing.T) {
+	handler := newPaginatedHandler()
+
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"undecodable cursor with huge limit", "/paginated_payload?total=1000000&limit=1000000&cursor=notbase64!!"},
+		{"undecodable cursor with servicenow mode", "/paginated_payload?total=1000000&limit=1000000&cursor=notbase64!!&servicenow=true"},
+		{"cursor carrying an oversized limit", "/paginated_payload?total=1000000&cursor=" + createCursorWithLimit(0, 1000000)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.url, nil)
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("Expected status 200, got %d", w.Code)
+			}
+			var response PaginatedResponse
+			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to parse JSON: %v", err)
+			}
+			if len(response.Result) > maxPageSize {
+				t.Errorf("Expected at most %d items, got %d", maxPageSize, len(response.Result))
+			}
+		})
+	}
+}
+
+// TestPaginatedPayloadHandlerNegativeCursorID covers the negative-offset half of
+// CODE_REVIEW #3: a cursor with a negative id produced items such as {"id":-499}.
+func TestPaginatedPayloadHandlerNegativeCursorID(t *testing.T) {
+	handler := newPaginatedHandler()
+
+	req := httptest.NewRequest("GET", "/paginated_payload?total=1000&cursor="+createCursorWithLimit(-500, 100), nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", w.Code)
+	}
+	var response PaginatedResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to parse JSON: %v", err)
+	}
+	if len(response.Result) == 0 {
+		t.Fatal("Expected items in the response")
+	}
+	for _, item := range response.Result {
+		if item.ID < 1 {
+			t.Fatalf("Expected all item IDs to be positive, got %d", item.ID)
+		}
+	}
+}
+
+// createCursorWithLimit builds a cursor carrying an arbitrary id and limit, which
+// createCursor itself cannot produce — it is how a client would forge one.
+func createCursorWithLimit(startID, limit int) string {
+	cd := struct {
+		ID    int `json:"id"`
+		Limit int `json:"limit"`
+	}{ID: startID, Limit: limit}
+	data, _ := json.Marshal(cd)
+	return base64.URLEncoding.EncodeToString(data)
+}
+
+// TestPaginatedPayloadHandlerInvalidParameters checks that unparseable values are
+// rejected rather than silently replaced by defaults.
+func TestPaginatedPayloadHandlerInvalidParameters(t *testing.T) {
+	handler := newPaginatedHandler()
+
+	urls := []string{
+		"/paginated_payload?total=abc",
+		"/paginated_payload?limit=abc",
+		"/paginated_payload?offset=abc",
+		"/paginated_payload?page=abc",
+		"/paginated_payload?size=abc",
+		"/paginated_payload?delay=notaduration",
+		"/paginated_payload?delay=-5ms",
+		"/paginated_payload?servicenow=maybe",
+	}
+
+	for _, u := range urls {
+		t.Run(u, func(t *testing.T) {
+			req := httptest.NewRequest("GET", u, nil)
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", w.Code)
+			}
+		})
 	}
 }
