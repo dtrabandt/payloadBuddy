@@ -71,11 +71,13 @@ jobs:
           go-version: "1.26"
           check-latest: true
 
+      # Build golangci-lint from source with the runner's Go toolchain. The prebuilt
+      # binaries the action installs are compiled with an older Go and refuse to load a
+      # config whose module targets a newer Go ("build Go version is lower than targeted");
+      # `go run` compiles it with Go 1.26 here, matching go.mod. Pinned to a v2 release to
+      # match the v2-schema .golangci.yml.
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6 run --timeout=5m ./...
 
   security:
     name: Security Scan
