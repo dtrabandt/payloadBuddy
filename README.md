@@ -181,8 +181,19 @@ For production use or external access, see the **[DEPLOYMENT.md](DEPLOYMENT.md)*
 
 > **OpenAPI Specification**: The complete OpenAPI 3.1.1 specification is available at `/openapi.json` for programmatic access and integration with tools like Postman, Insomnia, or code generators.
 
+> **Parameter validation**: All three data endpoints reject invalid query parameters with
+> **HTTP 400** rather than falling back to defaults — a value that cannot be parsed, a
+> negative delay, or a count outside the documented range is an error, not a hint. This
+> surfaces client bugs instead of hiding them behind a plausible-looking 200.
+
 ### /rest_payload
-Returns 100,000 JSON objects in a single response (default, configurable via `count` parameter).
+Returns 10,000 JSON objects in a single response (default, configurable via `count` parameter).
+
+#### Query Parameters
+
+| Parameter | Description | Default | Examples |
+|-----------|-------------|---------|----------|
+| `count` | Number of objects to return (1–1,000,000) | 10000 | `count=5000` |
 
 **Without Authentication:**
 ```sh
@@ -205,8 +216,11 @@ Advanced streaming endpoint with multiple configuration options.
 | `delay` | Base delay between items | 10 | `delay=100ms`, `delay=1s`, `delay=500` |
 | `strategy` | Delay pattern | fixed | `fixed`, `random`, `progressive`, `burst` |
 | `scenario` | ServiceNow scenario | none | `peak_hours`, `maintenance`, `network_issues`, `database_load` |
-| `batch_size` | Items per flush | 100 | `batch_size=50` |
+| `batch_size` | Items per flush (1 or greater) | 100 | `batch_size=50` |
 | `servicenow` | ServiceNow mode | false | `servicenow=true` |
+
+`delay` accepts a Go duration (`100ms`, `1s`) or a plain number of milliseconds, and must not
+be negative.
 
 ### /paginated_payload
 **Perfect for ServiceNow Data Stream actions** - supports all common pagination patterns used in REST APIs.
@@ -230,11 +244,11 @@ Advanced streaming endpoint with multiple configuration options.
 | Parameter | Description | Default | Examples |
 |-----------|-------------|---------|----------|
 | `total` | Total items across all pages | 10000 | `total=50000` |
-| `limit` | Items per page (limit/offset) | 100 | `limit=50` |
+| `limit` | Items per page (limit/offset, max 1000) | 100 | `limit=50` |
 | `offset` | Starting position (limit/offset) | 0 | `offset=200` |
 | `page` | Page number (page/size) | 1 | `page=3` |
-| `size` | Items per page (page/size) | 100 | `size=25` |
-| `cursor` | Cursor token (cursor pagination) | - | `cursor=eyJpZCI6MTAwfQ%3D%3D` |
+| `size` | Items per page (page/size, max 1000) | 100 | `size=25` |
+| `cursor` | Cursor token (cursor pagination, max 1000 items per page) | - | `cursor=eyJpZCI6MTAwfQ%3D%3D` |
 | `servicenow` | ServiceNow record format | false | `servicenow=true` |
 | `delay` | Response delay | 0 | `delay=100ms` |
 

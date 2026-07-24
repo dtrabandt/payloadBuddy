@@ -118,13 +118,15 @@ func NewOpenAPIHandler(plugins []PayloadPlugin, authCfg *auth.Config) http.Handl
 
 // SwaggerUIHandler serves the Swagger UI HTML interface.
 func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>PayloadBuddy API Documentation</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css"
+          integrity="sha384-ZJ2d83jl4Lvr6GKYzXpvQUmu+8us6T5frIryNHoLuypLK61jUnnCWZWyyrnifLda"
+          crossorigin="anonymous" />
     <style>
         html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
         *, *:before, *:after { box-sizing: inherit; }
@@ -133,8 +135,12 @@ func SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
     <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
-    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"
+            integrity="sha384-yrdF3mlUytUBwQyEVFAdwuUKEC9Qqrf+IUCgFgho4O5O6irf77pMjv36FN4eTpQD"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"
+            integrity="sha384-azzkurII4f+bjmZvm3hWhj7JezshyXtwobwneRyWCCIksK61Xi0Ry3xA2am9/TWp"
+            crossorigin="anonymous"></script>
     <script>
         window.onload = function() {
             SwaggerUIBundle({

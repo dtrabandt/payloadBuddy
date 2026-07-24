@@ -660,3 +660,137 @@ func TestGetScenarioDelay_CustomType(t *testing.T) {
 		t.Errorf("Expected FixedDelay, got %v", strategy)
 	}
 }
+
+// TestEmbeddedSchemaCompiles covers CODE_REVIEW #12: the schema is now the first
+// validation gate, so a schema that does not compile disables scenario loading entirely.
+func TestEmbeddedSchemaCompiles(t *testing.T) {
+	if _, err := compiledSchema(); err != nil {
+		t.Fatalf("Embedded schema failed to compile: %v", err)
+	}
+}
+
+// TestEmbeddedScenariosMatchSchema keeps the shipped scenarios and their published
+// schema from drifting apart.
+func TestEmbeddedScenariosMatchSchema(t *testing.T) {
+	validator := NewValidator()
+
+	entries, err := embeddedScenarios.ReadDir("embedded")
+	if err != nil {
+		t.Fatalf("Failed to read embedded scenarios: %v", err)
+	}
+	checked := 0
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") || entry.Name() == "scenario_schema_v1.0.0.json" {
+			continue
+		}
+		content, err := embeddedScenarios.ReadFile(filepath.Join("embedded", entry.Name()))
+		if err != nil {
+			t.Fatalf("Failed to read %s: %v", entry.Name(), err)
+		}
+		if _, err := validator.ValidateJSON(content); err != nil {
+			t.Errorf("%s does not satisfy the embedded schema: %v", entry.Name(), err)
+		}
+		checked++
+	}
+	if checked == 0 {
+		t.Fatal("Expected at least one embedded scenario to check")
+	}
+}
+
+// TestValidateJSONSchemaViolations covers CODE_REVIEW #12: rules the schema declares
+// but the hand-rolled validator never enforced.
+func TestValidateJSONSchemaViolations(t *testing.T) {
+	validator := NewValidator()
+
+	tests := []struct {
+		name string
+		json string
+	}{
+		{
+			"unknown top-level property",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","bogus_key":1}`,
+		},
+		{
+			"batch_size above schema maximum",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","batch_size":20000}`,
+		},
+		{
+			"batch_size below schema minimum",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","batch_size":0}`,
+		},
+		{
+			"unknown property in a nested object",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","response_limits":{"bogus":1}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := validator.ValidateJSON([]byte(tt.json)); err == nil {
+				t.Error("Expected schema validation to reject the document")
+			}
+		})
+	}
+}
+
+// TestValidateJSONOptionalDefaults covers CODE_REVIEW #11: consecutive_error_limit and
+// metrics_interval are optional-with-defaults in the schema, but the Go validator
+// rejected their zero value — so these files failed -verify and were silently dropped
+// at startup.
+func TestValidateJSONOptionalDefaults(t *testing.T) {
+	validator := NewValidator()
+
+	tests := []struct {
+		name string
+		json string
+	}{
+		{
+			"performance_monitoring without metrics_interval",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","performance_monitoring":{"enabled":true}}`,
+		},
+		{
+			"error_injection without consecutive_error_limit",
+			`{"scenario_name":"T","scenario_type":"custom","base_delay":"1s","error_injection":{"enabled":true,"error_rate":0.1}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := validator.ValidateJSON([]byte(tt.json)); err != nil {
+				t.Errorf("Expected the document to validate, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestValidateDelayFormatAnchoring covers CODE_REVIEW #13: "^(...)|\d+$" anchored ^ to
+// the first alternative and $ to the second only, so trailing and leading junk matched.
+func TestValidateDelayFormatAnchoring(t *testing.T) {
+	validator := NewValidator()
+
+	tests := []struct {
+		delay     string
+		shouldErr bool
+	}{
+		{"100ms", false},
+		{"1.5s", false},
+		{"500", false},
+		{"100msJUNK", true},
+		{"garbage100", true},
+		{"-5", true},
+		{"-5ms", true},
+		{"ms", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.delay, func(t *testing.T) {
+			err := validator.validateDelayFormat(tt.delay)
+			if tt.shouldErr && err == nil {
+				t.Errorf("Expected %q to be rejected", tt.delay)
+			}
+			if !tt.shouldErr && err != nil {
+				t.Errorf("Expected %q to be accepted, got: %v", tt.delay, err)
+			}
+		})
+	}
+}

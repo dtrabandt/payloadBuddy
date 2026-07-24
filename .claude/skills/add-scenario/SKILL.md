@@ -54,6 +54,10 @@ Validation covers delay formats, version compatibility, and configuration parame
 reports errors per-field. Run `-verify` on any scenario file you write or edit before
 assuming it loads. Get a `Validator` via `NewValidator()`.
 
+Validation runs in two layers: the embedded `scenario_schema_v1.0.0.json` (checked via
+`gojsonschema`) and then struct-level rules in `validator.go`. **Keep the two in sync** —
+they drifted apart once already. If you add a field or constraint, update both.
+
 ## Tests to extend
 
 A new or changed scenario needs coverage on both endpoints:

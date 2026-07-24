@@ -45,12 +45,12 @@ internal/handlers/
   streaming.go               /stream_payload — fixed/random/progressive/burst delays
   paginated.go               /paginated_payload — limit/offset, page/size, cursor
   docs.go                    /openapi.json — OpenAPI 3.1.1, built via Init(allPlugins, authCfg)
-  swagger.go                 /swagger — interactive Swagger UI
-  helpers.go                 Shared handler utilities — check here before writing a new one
+  swagger.go                 /swagger — interactive Swagger UI (CDN assets carry SRI hashes)
+  helpers.go                 Shared handler utilities, incl. queryParser — check here first
 internal/openapi/types.go    OpenAPI 3.1.1 structs (the only place they are defined)
 internal/scenarios/
   manager.go                 Manager, NewManager() — loads embedded + user scenarios
-  validator.go               Validator, NewValidator() — JSON schema validation, -verify
+  validator.go               Validator, NewValidator() — schema + struct-level rules, -verify
   types.go                   Scenario data structures
   embedded/                  Built-in scenarios compiled into the binary
 ```
@@ -76,6 +76,11 @@ compatible with ServiceNow Data Stream actions.
 ## Conventions
 
 - **Test first.** Red → green → refactor. CI enforces an 80% total coverage floor.
+- **Validate query params, don't silently default.** Parse through `newQueryParser(r)`
+  (`internal/handlers/helpers.go`), check `q.Err()` once, and return **HTTP 400** before
+  writing any output. Silently substituting a default for bad input hides client bugs behind
+  200s — that is how the panics found in the 2026-07-24 review reached the handlers. New
+  endpoints follow this shape and document a `400` in their `OpenAPISpec()`.
 - Table-driven tests; `httptest.NewRecorder()` for handlers.
 - `log/slog`, not `log.Printf`.
 - Go 1.22+ idioms already adopted throughout: method routing, `for i := range n`, `slices`.

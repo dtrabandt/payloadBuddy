@@ -30,6 +30,11 @@ If the endpoint needs the scenario manager, take it as a struct field the way
 `StreamingPayloadPlugin{SM}` and `PaginatedPayloadPlugin{SM}` do, and inject it — do not
 reach for a package-level global.
 
+Parse query parameters through `newQueryParser(r)` (`internal/handlers/helpers.go`), then
+check `q.Err()` once and return **HTTP 400** before writing any output. Never silently
+substitute a default for invalid input — that hid client bugs behind 200s and let malformed
+values reach the handler as panics. Document the `400` response in `OpenAPISpec()`.
+
 **3. Wire it in `main.go`.** Append the plugin to the slice that `main()` builds. This is
 deliberate: there is no `init()` auto-registration and no mutable plugin global, so a plugin
 that is not in that slice does not exist. Routes are registered with Go 1.22 method-routing,

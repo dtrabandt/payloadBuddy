@@ -1,14 +1,36 @@
 package scenarios
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/xeipuuv/gojsonschema"
 )
+
+// scenarioSchemaJSON is the published contract for scenario files. It is served to
+// users as the schema their editors validate against, so it must also be what the
+// application enforces — hand-rolled checks alone have drifted from it before.
+//
+//go:embed embedded/scenario_schema_v1.0.0.json
+var scenarioSchemaJSON []byte
+
+// compiledSchema compiles the embedded schema once. A compilation failure is a build
+// defect rather than a user error, so it is surfaced from every validation attempt
+// instead of being silently skipped.
+var compiledSchema = sync.OnceValues(func() (*gojsonschema.Schema, error) {
+	schema, err := gojsonschema.NewSchema(gojsonschema.NewBytesLoader(scenarioSchemaJSON))
+	if err != nil {
+		return nil, fmt.Errorf("embedded scenario schema failed to compile: %v", err)
+	}
+	return schema, nil
+})
 
 // Validator validates scenario JSON against the defined schema rules.
 type Validator struct {
@@ -21,7 +43,13 @@ func NewValidator() *Validator {
 }
 
 // ValidateJSON parses and validates raw JSON, returning the Scenario or an error.
+// The document is checked against the embedded JSON Schema first — that catches
+// unknown properties and out-of-range values the struct rules cannot see — and then
+// against the struct-level rules, which carry the more specific messages.
 func (sv *Validator) ValidateJSON(jsonData []byte) (*Scenario, error) {
+	if err := sv.validateAgainstSchema(jsonData); err != nil {
+		return nil, err
+	}
 	var scenario Scenario
 	if err := json.Unmarshal(jsonData, &scenario); err != nil {
 		return nil, fmt.Errorf("JSON parsing failed: %v", err)
@@ -30,6 +58,26 @@ func (sv *Validator) ValidateJSON(jsonData []byte) (*Scenario, error) {
 		return nil, err
 	}
 	return &scenario, nil
+}
+
+// validateAgainstSchema checks raw JSON against the embedded scenario schema.
+func (sv *Validator) validateAgainstSchema(jsonData []byte) error {
+	schema, err := compiledSchema()
+	if err != nil {
+		return err
+	}
+	result, err := schema.Validate(gojsonschema.NewBytesLoader(jsonData))
+	if err != nil {
+		return fmt.Errorf("JSON parsing failed: %v", err)
+	}
+	if result.Valid() {
+		return nil
+	}
+	messages := make([]string, 0, len(result.Errors()))
+	for _, e := range result.Errors() {
+		messages = append(messages, e.String())
+	}
+	return fmt.Errorf("schema validation failed: %s", strings.Join(messages, "; "))
 }
 
 // ValidateScenario validates a Scenario struct against all schema rules.
@@ -136,7 +184,9 @@ func (sv *Validator) ValidateScenarioFileContent(filePath string) (*Scenario, er
 }
 
 func (sv *Validator) validateDelayFormat(delay string) error {
-	durationPattern := regexp.MustCompile(`^(\d+(\.\d+)?(ns|us|μs|ms|s|m|h))|\d+$`)
+	// Both alternatives are anchored at each end; anchoring only the outer ends would
+	// accept "100msJUNK", "garbage100" and "-5".
+	durationPattern := regexp.MustCompile(`^\d+(\.\d+)?(ns|us|μs|ms|s|m|h)$|^\d+$`)
 	if !durationPattern.MatchString(delay) {
 		return fmt.Errorf("invalid delay format: %s", delay)
 	}
@@ -192,14 +242,16 @@ func (sv *Validator) validateErrorInjection(config *ErrorInjectionConfig) error 
 			return fmt.Errorf("recovery_delay validation failed: %v", err)
 		}
 	}
-	if config.ConsecutiveErrorLimit < 1 || config.ConsecutiveErrorLimit > 10 {
+	// Optional with a schema default: only a value that was actually supplied is checked.
+	if config.ConsecutiveErrorLimit != 0 && (config.ConsecutiveErrorLimit < 1 || config.ConsecutiveErrorLimit > 10) {
 		return fmt.Errorf("consecutive_error_limit must be between 1 and 10")
 	}
 	return nil
 }
 
 func (sv *Validator) validatePerformanceConfig(config *PerformanceConfig) error {
-	if config.MetricsInterval < 1 || config.MetricsInterval > 10000 {
+	// Optional with a schema default: only a value that was actually supplied is checked.
+	if config.MetricsInterval != 0 && (config.MetricsInterval < 1 || config.MetricsInterval > 10000) {
 		return fmt.Errorf("metrics_interval must be between 1 and 10000")
 	}
 	return nil

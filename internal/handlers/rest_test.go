@@ -168,3 +168,62 @@ func TestRestPayloadPlugin_OpenAPISpec(t *testing.T) {
 		t.Error("Missing Item schema")
 	}
 }
+
+// TestRestPayloadHandler_InvalidCount covers CODE_REVIEW #5: unparseable and
+// out-of-range counts silently returned the 10,000-item default with HTTP 200, while
+// the OpenAPI spec advertised min 1 / max 1000000 and both sibling endpoints 400.
+func TestRestPayloadHandler_InvalidCount(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"unparseable", "/rest_payload?count=abc"},
+		{"float", "/rest_payload?count=123.45"},
+		{"negative", "/rest_payload?count=-5"},
+		{"zero", "/rest_payload?count=0"},
+		{"above maximum", "/rest_payload?count=99999999"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			w := httptest.NewRecorder()
+			RestPayloadHandler(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", w.Code)
+			}
+		})
+	}
+}
+
+func TestRestPayloadHandler_ValidCount(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected int
+	}{
+		{"explicit count", "/rest_payload?count=5", 5},
+		{"minimum", "/rest_payload?count=1", 1},
+		{"absent uses default", "/rest_payload", defaultRestCount},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			w := httptest.NewRecorder()
+			RestPayloadHandler(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("Expected status 200, got %d", w.Code)
+			}
+			var items []Item
+			if err := json.Unmarshal(w.Body.Bytes(), &items); err != nil {
+				t.Fatalf("Failed to parse JSON: %v", err)
+			}
+			if len(items) != tt.expected {
+				t.Errorf("Expected %d items, got %d", tt.expected, len(items))
+			}
+		})
+	}
+}
