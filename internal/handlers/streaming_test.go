@@ -344,16 +344,9 @@ func TestApplyDelay_NetworkIssuesScenario(t *testing.T) {
 	ctx := context.Background()
 	sm := scenarios.NewManager()
 
-	hitShortDelay := false
-	for i := range 50 {
-		if err := applyDelay(ctx, scenarios.FixedDelay, 1*time.Millisecond, "network_issues", i, sm); err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-		hitShortDelay = true
-		break
-	}
-	if !hitShortDelay {
-		t.Error("Expected to complete at least one network_issues delay")
+	// A single network_issues delay must complete without error.
+	if err := applyDelay(ctx, scenarios.FixedDelay, 1*time.Millisecond, "network_issues", 0, sm); err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }
 

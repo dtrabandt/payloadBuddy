@@ -109,7 +109,7 @@ func TestOpenAPIHandler_PathsAndSchemas(t *testing.T) {
 		t.Fatal("Missing components or schemas")
 	}
 	for _, schemaName := range []string{"Item", "StreamItem"} {
-		if _, exists := spec.Components.Schemas[schemaName]; !exists {
+		if _, ok := spec.Components.Schemas[schemaName]; !ok {
 			t.Errorf("Missing schema: %s", schemaName)
 		}
 	}

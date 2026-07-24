@@ -33,3 +33,6 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# Claude Code — share settings.json and skills/, keep personal overrides local
+.claude/settings.local.json

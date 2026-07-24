@@ -59,7 +59,9 @@ git checkout -b feature/your-feature-name
 
 ### 2. Follow TDD Approach
 
-This project uses **Test-Driven Development**. See [CLAUDE.md](CLAUDE.md) for detailed TDD guidelines.
+This project uses **Test-Driven Development**. See
+[.claude/skills/go-tdd/SKILL.md](.claude/skills/go-tdd/SKILL.md) for detailed TDD guidelines
+and the project's test patterns.
 
 **Red-Green-Refactor Cycle**:
 1. **Write a failing test** first
@@ -248,6 +250,9 @@ All checks must pass before merging:
 ├── .github/workflows/               # CI/CD pipeline
 │   ├── test.yml                     # PR testing workflow
 │   └── release.yml                  # Release automation
+├── .claude/                         # Claude Code configuration (shared)
+│   ├── settings.json                # Hooks — auto-runs gofmt on edited .go files
+│   └── skills/                      # go-tdd, add-endpoint, add-scenario, preflight
 ├── README.md                        # User documentation
 ├── CONTRIBUTING.md                  # This file
 ├── CLAUDE.md                        # Development guidance for AI
