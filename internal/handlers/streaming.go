@@ -132,12 +132,15 @@ func NewStreamingHandler(sm *scenarios.Manager) http.HandlerFunc {
 }
 
 // applyDelay sleeps for the appropriate duration based on strategy, scenario, and item index.
-// Returns a non-nil error only when the context is cancelled.
+// Returns a non-nil error only when the context is canceled.
 func applyDelay(ctx context.Context, strategy scenarios.DelayStrategy, baseDelay time.Duration, scenario string, itemIndex int, sm *scenarios.Manager) error {
 	var delay time.Duration
 
 	if sm != nil && scenario != "" {
-		calculatedDelay, calculatedStrategy := sm.GetScenarioDelay(scenario, itemIndex)
+		// The scenario manager already resolves the effective delay; the strategy
+		// classification it returns is only consulted in the no-scenario branch below,
+		// so it is intentionally discarded here.
+		calculatedDelay, _ := sm.GetScenarioDelay(scenario, itemIndex)
 		if scenario == "network_issues" {
 			randFloat, err := secureRandFloat32()
 			if err != nil || randFloat >= 0.1 {
@@ -152,7 +155,6 @@ func applyDelay(ctx context.Context, strategy scenarios.DelayStrategy, baseDelay
 			}
 		} else {
 			delay = calculatedDelay
-			strategy = calculatedStrategy
 		}
 	} else {
 		switch scenario {

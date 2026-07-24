@@ -3,46 +3,50 @@ version: "2"
 linters:
   enable:
     - errcheck        # Check for unchecked errors
-    - gosimple        # Simplify code where possible
     - govet           # Report suspicious constructs (vet checks)
     - ineffassign     # Detect assignments to variables never used
-    - staticcheck     # A collection of static analysis checks
+    - staticcheck     # Static analysis checks (absorbs the former gosimple)
     - unused          # Check for unused code
-    - gofmt           # Check formatting (should already pass via CI)
-    - goimports       # Check import grouping
     - misspell        # Fix commonly misspelled words
     - revive          # Opinionated linter with good defaults
     - bodyclose       # Check that HTTP response bodies are closed
     - noctx           # Find HTTP requests sent without context
 
-linters-settings:
-  revive:
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true  # Allow unexported identifiers without doc comments
+        - name: package-comments
+          disabled: true  # Allow packages without top-level doc comments
+    govet:
+      enable:
+        - shadow
+        - printf
+        - structtag
+    misspell:
+      locale: US
+
+  exclusions:
     rules:
-      - name: exported
-        disabled: true  # Allow unexported identifiers without doc comments
-      - name: package-comments
-        disabled: true  # Allow packages without top-level doc comments
-  govet:
-    enable-all: false
-    enable:
-      - shadow
-      - printf
-      - structtag
-  gofmt:
-    simplify: true
-  misspell:
-    locale: US
+      # Test files: relax some rules
+      - path: "_test\\.go"
+        linters:
+          - errcheck
+          - bodyclose
+      # Main package: allow fmt.Print* in startup/output functions
+      - path: "main\\.go"
+        linters:
+          - revive
+
+formatters:
+  enable:
+    - gofmt           # Check formatting (should already pass via CI + edit hook)
+    - goimports       # Check import grouping
+  settings:
+    gofmt:
+      simplify: true
 
 issues:
-  exclude-rules:
-    # Test files: relax some rules
-    - path: "_test\\.go"
-      linters:
-        - errcheck
-        - bodyclose
-    # Main package: allow fmt.Print* in startup/output functions
-    - path: "main\\.go"
-      linters:
-        - revive
   max-issues-per-linter: 50
   max-same-issues: 10

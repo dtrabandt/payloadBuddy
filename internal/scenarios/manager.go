@@ -141,7 +141,9 @@ func scenarioPath() string {
 		basePath = os.Getenv("USERPROFILE")
 	}
 	p := filepath.Join(basePath, ".config", "payloadBuddy", "scenarios")
+	// #nosec G703 -- p is a constant suffix under the user's own HOME/USERPROFILE, not external input.
 	if _, err := os.Stat(p); os.IsNotExist(err) {
+		// #nosec G703 -- same: creates the user-owned config directory only.
 		if err := os.MkdirAll(p, 0750); err != nil {
 			slog.Warn("failed to create scenario directory", "path", p, "err", err)
 		} else {
@@ -198,6 +200,7 @@ func (sm *Manager) loadUser() {
 			slog.Warn("skipping file outside user directory", "path", path)
 			return nil
 		}
+		// #nosec G122 -- cleanPath is filepath.Clean'd and prefix-checked above to stay within sm.userPath.
 		content, err := os.ReadFile(cleanPath)
 		if err != nil {
 			slog.Warn("failed to read user scenario", "path", cleanPath, "err", err)

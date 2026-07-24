@@ -137,8 +137,3 @@ func TestRegisterPluginsAndStart_PortLogic(t *testing.T) {
 func TestStartHTTPServer_Configuration(t *testing.T) {
 	t.Skip("startHTTPServer calls ListenAndServe which blocks — covered by integration tests")
 }
-
-// isValidHTTPPath checks that a path is a valid HTTP endpoint path.
-func isValidHTTPPath(path string) bool {
-	return len(path) > 0 && path[0] == '/'
-}

@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "-c",
+              "import json,os,subprocess,sys; f=(json.load(sys.stdin).get(\"tool_input\") or {}).get(\"file_path\") or \"\"; f.endswith(\".go\") and os.path.isfile(f) and subprocess.run([\"gofmt\",\"-s\",\"-w\",f])"
+            ],
+            "timeout": 15,
+            "statusMessage": "gofmt"
+          }
+        ]
+      }
+    ]
+  }
+}
